@@ -1,4 +1,4 @@
-// swift-tools-version: 5.6
+// swift-tools-version: 5.10
 
 import PackageDescription
 
@@ -14,6 +14,7 @@ let package = Package(
     .plugin(name: "UpdateVersionPlugin", targets: ["UpdateVersionPlugin"])
   ],
   dependencies: [
+    .package(url: "https://github.com/pointfreeco/swift-dependencies.git", from: "1.6.2"),
     .package(url: "https://github.com/m-housh/swift-shell-client.git", from: "0.1.3"),
     .package(url: "https://github.com/apple/swift-docc-plugin.git", from: "1.0.0"),
     .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.2.2")
@@ -26,15 +27,18 @@ let package = Package(
         .product(name: "ArgumentParser", package: "swift-argument-parser")
       ]
     ),
+    .target(name: "TestSupport"),
     .target(
       name: "CliVersion",
       dependencies: [
+        .product(name: "Dependencies", package: "swift-dependencies"),
+        .product(name: "DependenciesMacros", package: "swift-dependencies"),
         .product(name: "ShellClient", package: "swift-shell-client")
       ]
     ),
     .testTarget(
       name: "CliVersionTests",
-      dependencies: ["CliVersion"]
+      dependencies: ["CliVersion", "TestSupport"]
     ),
     .plugin(
       name: "BuildWithVersionPlugin",

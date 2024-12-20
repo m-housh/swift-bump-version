@@ -40,7 +40,7 @@ public struct GitVersionClient {
   /// - Parameters:
   ///   - gitDirectory: The directory to run the command in.
   public func currentVersion(in gitDirectory: String? = nil) throws -> String {
-    try self.currentVersion(gitDirectory)
+    try currentVersion(gitDirectory)
   }
 
   /// Override the `currentVersion` command and return the passed in version string.
@@ -50,7 +50,7 @@ public struct GitVersionClient {
   /// - Parameters:
   ///   - version: The version string to return when `currentVersion` is called.
   public mutating func override(with version: String) {
-    self.currentVersion = { _ in version }
+    currentVersion = { _ in version }
   }
 }
 
@@ -69,32 +69,33 @@ extension GitVersionClient: TestDependencyKey {
   }
 }
 
-extension DependencyValues {
+public extension DependencyValues {
 
   /// A ``GitVersionClient`` that can retrieve the current version from a
   /// git directory.
-  public var gitVersionClient: GitVersionClient {
+  var gitVersionClient: GitVersionClient {
     get { self[GitVersionClient.self] }
     set { self[GitVersionClient.self] = newValue }
   }
 }
 
-extension ShellCommand {
-  public static func gitCurrentSha(gitDirectory: String? = nil) -> Self {
+public extension ShellCommand {
+  static func gitCurrentSha(gitDirectory: String? = nil) -> Self {
     GitVersion(workingDirectory: gitDirectory).command(for: .commit)
   }
 
-  public static func gitCurrentBranch(gitDirectory: String? = nil) -> Self {
+  static func gitCurrentBranch(gitDirectory: String? = nil) -> Self {
     GitVersion(workingDirectory: gitDirectory).command(for: .branch)
   }
 
-  public static func gitCurrentTag(gitDirectory: String? = nil) -> Self {
+  static func gitCurrentTag(gitDirectory: String? = nil) -> Self {
     GitVersion(workingDirectory: gitDirectory).command(for: .describe)
   }
 }
 
 // MARK: - Private
-fileprivate struct GitVersion {
+
+private struct GitVersion {
   @Dependency(\.logger) var logger: Logger
   @Dependency(\.shellClient) var shell: ShellClient
 
@@ -113,7 +114,7 @@ fileprivate struct GitVersion {
     }
   }
 
-  internal func command(for argument: VersionArgs) -> ShellCommand {
+  func command(for argument: VersionArgs) -> ShellCommand {
     .init(
       shell: .env,
       environment: nil,
@@ -123,7 +124,7 @@ fileprivate struct GitVersion {
   }
 }
 
-fileprivate extension GitVersion {
+private extension GitVersion {
   func run(command: ShellCommand) throws -> String {
     try shell.background(command, trimmingCharactersIn: .whitespacesAndNewlines)
   }

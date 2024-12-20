@@ -15,7 +15,7 @@ func parseTarget(_ target: String) -> URL {
 
 extension URL {
   func fileString() -> String {
-    self.absoluteString
+    absoluteString
       .replacingOccurrences(of: "file://", with: "")
   }
 }
@@ -32,6 +32,7 @@ let VERSION: String = nil
 
 """
 
+// TODO: Use Int for `verbose`.
 struct SharedOptions: ParsableArguments {
 
   @Argument(help: "The target for the version file.")

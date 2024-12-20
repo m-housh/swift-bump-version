@@ -1,6 +1,7 @@
 import ArgumentParser
-import Foundation
 import CliVersion
+import Dependencies
+import Foundation
 import ShellClient
 
 extension CliVersionCommand {
@@ -17,8 +18,9 @@ extension CliVersionCommand {
       name: .customLong("git-directory"),
       help: "The git directory for the version."
     )
-    var gitDirectory: String? = nil
-    
+    var gitDirectory: String?
+
+    // TODO: Use CliClient
     func run() throws {
       try withDependencies {
         $0.logger.logLevel = shared.verbose ? .debug : .info
@@ -54,6 +56,6 @@ extension CliVersionCommand {
   }
 }
 
-fileprivate enum UpdateError: Error {
+private enum UpdateError: Error {
   case versionFileDoesNotExist(path: String)
 }

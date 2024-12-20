@@ -1,6 +1,8 @@
-import XCTest
-import CliVersion
+@_spi(Internal) import CliVersion
+import Dependencies
 import ShellClient
+import TestSupport
+import XCTest
 
 final class GitVersionTests: XCTestCase {
 
@@ -21,8 +23,7 @@ final class GitVersionTests: XCTestCase {
       .deletingLastPathComponent()
       .deletingLastPathComponent()
       .deletingLastPathComponent()
-      .absoluteString
-      .replacingOccurrences(of: "file://", with: "")
+      .cleanFilePath
   }
 
   func test_overrides_work() throws {
@@ -43,7 +44,6 @@ final class GitVersionTests: XCTestCase {
     print("VERSION: \(version)")
     // can't really have a predictable result for the live client.
     XCTAssertNotEqual(version, "blob")
-
   }
 
   func test_commands() throws {
@@ -65,38 +65,31 @@ final class GitVersionTests: XCTestCase {
   }
 
   func test_file_client() throws {
-    @Dependency(\.fileClient) var fileClient
-    
-    let tmpDir = FileManager.default.temporaryDirectory
-      .appendingPathComponent("file-client-test")
-    
-    try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
-    defer { try! FileManager.default.removeItem(at: tmpDir) }
-    
-    let filePath = tmpDir.appendingPathComponent("blob.txt")
-    try fileClient.write(string: "Blob", to: filePath)
-    
-    let contents = try String(contentsOf: filePath)
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-    XCTAssertEqual(contents, "Blob")
+    try withTemporaryDirectory { tmpDir in
+      @Dependency(\.fileClient) var fileClient
 
+      let filePath = tmpDir.appendingPathComponent("blob.txt")
+      try fileClient.write(string: "Blob", to: filePath)
+
+      let contents = try fileClient.read(filePath)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+      XCTAssertEqual(contents, "Blob")
+    }
   }
 
   func test_file_client_with_string_path() throws {
-    @Dependency(\.fileClient) var fileClient
+    try withTemporaryDirectory { tmpDir in
+      @Dependency(\.fileClient) var fileClient
 
-    let tmpDir = FileManager.default.temporaryDirectory
-      .appendingPathComponent("file-client-string-test")
+      let filePath = tmpDir.appendingPathComponent("blob.txt")
+      let fileString = filePath.cleanFilePath
 
-    try FileManager.default.createDirectory(at: tmpDir, withIntermediateDirectories: true)
-    defer { try! FileManager.default.removeItem(at: tmpDir) }
+      try fileClient.write(string: "Blob", to: fileString)
 
-    let filePath = tmpDir.appendingPathComponent("blob.txt")
-    let fileString = filePath.absoluteString.replacingOccurrences(of: "file://", with: "")
-    try fileClient.write(string: "Blob", to: fileString)
+      let contents = try fileClient.read(fileString)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
 
-    let contents = try String(contentsOf: filePath)
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-    XCTAssertEqual(contents, "Blob")
+      XCTAssertEqual(contents, "Blob")
+    }
   }
 }

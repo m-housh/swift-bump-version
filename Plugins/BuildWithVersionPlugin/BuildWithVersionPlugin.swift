@@ -8,16 +8,16 @@ struct GenerateVersionBuildPlugin: BuildToolPlugin {
     target: PackagePlugin.Target
   ) async throws -> [PackagePlugin.Command] {
     guard let target = target as? SourceModuleTarget else { return [] }
-    
+
     let gitDirectoryPath = target.directory
       .removingLastComponent()
       .removingLastComponent()
-    
+
     let tool = try context.tool(named: "cli-version")
     let outputPath = context.pluginWorkDirectory
-    
+
     let outputFile = outputPath.appending("Version.swift")
-    
+
     return [
       .buildCommand(
         displayName: "Build With Version Plugin",

@@ -1,11 +1,10 @@
 import ArgumentParser
+import CliVersion
 import Dependencies
 import Foundation
-import CliVersion
 import ShellClient
 
 extension CliVersionCommand {
-
   struct Generate: ParsableCommand {
     static var configuration: CommandConfiguration = .init(
       abstract: "Generates a version file in a command line tool that can be set via the git tag or git sha.",
@@ -15,6 +14,7 @@ extension CliVersionCommand {
 
     @OptionGroup var shared: SharedOptions
 
+    // TODO: Use CliClient
     func run() throws {
       @Dependency(\.logger) var logger: Logger
       @Dependency(\.fileClient) var fileClient
@@ -35,12 +35,10 @@ extension CliVersionCommand {
       } else {
         logger.info("Would generate file at: \(fileString)")
       }
-
     }
   }
 }
 
-fileprivate enum GenerationError: Error {
+private enum GenerationError: Error {
   case fileExists(path: String)
 }
-
