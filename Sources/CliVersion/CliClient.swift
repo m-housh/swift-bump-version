@@ -106,6 +106,16 @@ public extension CliClient.SharedOptions {
       try await operation()
     }
   }
+
+  func write(_ string: String, to url: URL) async throws {
+    @Dependency(\.fileClient) var fileClient
+    @Dependency(\.logger) var logger
+    if !dryRun {
+      try await fileClient.write(string: string, to: url)
+    } else {
+      logger.debug("Skipping, due to dry-run being passed.")
+    }
+  }
 }
 
 private extension CliClient.SharedOptions {
@@ -131,11 +141,68 @@ private extension CliClient.SharedOptions {
 
       let fileContents = Template.build(currentVersion)
 
-      try await fileClient.write(string: fileContents, to: fileUrl)
+      try await write(fileContents, to: fileUrl)
 
       return fileUrl.cleanFilePath
     }
   }
+
+  private func getVersionString() async throws -> (String, Bool) {
+    @Dependency(\.fileClient) var fileClient
+    @Dependency(\.gitVersionClient) var gitVersionClient
+    @Dependency(\.logger) var logger
+    let targetUrl = fileUrl
+
+    guard fileClient.fileExists(targetUrl) else {
+      // Get the latest tag, not requiring an exact tag set on the commit.
+      // This will return a tag, that may have some more data on the patch
+      // portion of the tag, such as: 0.1.1-4-g59bc977
+      let version = try await gitVersionClient.currentVersion(in: gitDirectory, exactMatch: false)
+      // TODO: Not sure what to do for the uses optional value here??
+      return (version, false)
+    }
+
+    let contents = try await fileClient.read(fileUrl)
+    let versionLine = contents.split(separator: "\n")
+      .first { $0.hasPrefix("let VERSION:") }
+
+    guard let versionLine else {
+      throw CliClientError.failedToParseVersionFile
+    }
+    logger.debug("Version line: \(versionLine)")
+
+    let isOptional = versionLine.contains("String?")
+    logger.debug("Uses optional: \(isOptional)")
+
+    let versionString = versionLine.split(separator: "let VERSION: \(isOptional ? "String?" : "String") = ").last
+    guard let versionString else {
+      throw CliClientError.failedToParseVersionFile
+    }
+    return (String(versionString), isOptional)
+  }
+
+  // swiftlint:disable large_tuple
+  private func getVersionParts(_ version: String, _ bump: CliClient.BumpOption) throws -> (Int, Int, Int) {
+    @Dependency(\.logger) var logger
+    let parts = String(version).split(separator: ".")
+    logger.debug("Version parts: \(parts)")
+
+    // TODO: Better error.
+    guard parts.count == 3 else {
+      throw CliClientError.failedToParseVersionFile
+    }
+
+    var major = Int(String(parts[0].replacingOccurrences(of: "\"", with: ""))) ?? 0
+    var minor = Int(String(parts[1])) ?? 0
+
+    // Handle cases where patch version has extra data / not an exact match tag.
+    // Such as: 0.1.1-4-g59bc977
+    var patch = Int(String(parts[2].split(separator: "-").first ?? "0")) ?? 0
+    bump.bump(major: &major, minor: &minor, patch: &patch)
+    return (major, minor, patch)
+  }
+
+  // swiftlint:enable large_tuple
 
   func bump(_ type: CliClient.BumpOption) async throws -> String {
     try await run {
@@ -146,45 +213,13 @@ private extension CliClient.SharedOptions {
 
       logger.debug("Bump target url: \(targetUrl.cleanFilePath)")
 
-      let contents = try await fileClient.read(fileUrl)
-      let versionLine = contents.split(separator: "\n")
-        .first { $0.hasPrefix("let VERSION:") }
-
-      guard let versionLine else {
-        throw CliClientError.failedToParseVersionFile
-      }
-
-      let isOptional = versionLine.contains("String?")
-      let versionString = versionLine.split(separator: "let VERSION: \(isOptional ? "String?" : "String") = ").last
-      guard let versionString else {
-        throw CliClientError.failedToParseVersionFile
-      }
-
-      let parts = String(versionString).split(separator: ".")
-      logger.debug("Version parts: \(parts)")
-
-      // TODO: Better error.
-      guard parts.count == 3 else {
-        throw CliClientError.failedToParseVersionFile
-      }
-
-      var major = Int(String(parts[0])) ?? 0
-      var minor = Int(String(parts[1])) ?? 0
-      var patch = Int(String(parts[2])) ?? 0
-
-      type.bump(major: &major, minor: &minor, patch: &patch)
-
+      let (versionString, usesOptional) = try await getVersionString()
+      let (major, minor, patch) = try getVersionParts(versionString, type)
       let version = "\(major).\(minor).\(patch)"
       logger.debug("Bumped version: \(version)")
 
-      let template = isOptional ? Template.optional(version) : Template.build(version)
-
-      if !dryRun {
-        try await fileClient.write(string: template, to: targetUrl)
-      } else {
-        logger.debug("Skipping, due to dry-run being passed.")
-      }
-
+      let template = usesOptional ? Template.optional(version) : Template.build(version)
+      try await write(template, to: targetUrl)
       return targetUrl.cleanFilePath
     }
   }
@@ -203,12 +238,7 @@ private extension CliClient.SharedOptions {
       }
 
       let template = Template.optional(version)
-
-      if !dryRun {
-        try await fileClient.write(string: template, to: targetUrl)
-      } else {
-        logger.debug("Skipping, due to dry-run being passed.")
-      }
+      try await write(template, to: targetUrl)
       return targetUrl.cleanFilePath
     }
   }
@@ -242,20 +272,20 @@ public extension CliClient.BumpOption {
 }
 
 @_spi(Internal)
-public struct Template {
+public struct Template: Sendable {
   let type: TemplateType
   let version: String?
 
-  enum TemplateType: String {
+  enum TemplateType: String, Sendable {
     case optionalString = "String?"
     case string = "String"
   }
 
   var value: String {
+    let versionString = version != nil ? "\"\(version!)\"" : "nil"
     return """
     // Do not set this variable, it is set during the build process.
-    let VERSION: \(type.rawValue) = \(version ?? "nil")
-
+    let VERSION: \(type.rawValue) = \(versionString)
     """
   }
 
@@ -267,16 +297,6 @@ public struct Template {
     Self(type: .optionalString, version: version).value
   }
 }
-
-private let optionalTemplate = """
-// Do not set this variable, it is set during the build process.
-let VERSION: String? = nil
-"""
-
-private let buildTemplate = """
-// Do not set this variable, it is set during the build process.
-let VERSION: String = nil
-"""
 
 enum CliClientError: Error {
   case gitDirectoryNotFound

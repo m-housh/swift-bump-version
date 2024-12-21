@@ -5,7 +5,17 @@ import Foundation
 import Dependencies
 import DependenciesMacros
 import ShellClient
-import XCTestDynamicOverlay
+
+// TODO: This can be an internal dependency.
+public extension DependencyValues {
+
+  /// A ``GitVersionClient`` that can retrieve the current version from a
+  /// git directory.
+  var gitVersionClient: GitVersionClient {
+    get { self[GitVersionClient.self] }
+    set { self[GitVersionClient.self] = newValue }
+  }
+}
 
 /// A client that can retrieve the current version from a git directory.
 /// It will use the current `tag`, or if the current git tree does not
@@ -21,15 +31,15 @@ public struct GitVersionClient: Sendable {
 
   /// The closure to run that returns the current version from a given
   /// git directory.
-  public var currentVersion: @Sendable (String?) async throws -> String
+  public var currentVersion: @Sendable (String?, Bool) async throws -> String
 
   /// Get the current version from the `git tag` in the given directory.
   /// If a directory is not passed in, then we will use the current working directory.
   ///
   /// - Parameters:
   ///   - gitDirectory: The directory to run the command in.
-  public func currentVersion(in gitDirectory: String? = nil) async throws -> String {
-    try await currentVersion(gitDirectory)
+  public func currentVersion(in gitDirectory: String? = nil, exactMatch: Bool = true) async throws -> String {
+    try await currentVersion(gitDirectory, exactMatch)
   }
 }
 
@@ -40,33 +50,9 @@ extension GitVersionClient: TestDependencyKey {
 
   /// The ``GitVersionClient`` used in release builds.
   public static var liveValue: GitVersionClient {
-    .init(currentVersion: { gitDirectory in
-      try await GitVersion(workingDirectory: gitDirectory).currentVersion()
+    .init(currentVersion: { gitDirectory, exactMatch in
+      try await GitVersion(workingDirectory: gitDirectory).currentVersion(exactMatch)
     })
-  }
-}
-
-public extension DependencyValues {
-
-  /// A ``GitVersionClient`` that can retrieve the current version from a
-  /// git directory.
-  var gitVersionClient: GitVersionClient {
-    get { self[GitVersionClient.self] }
-    set { self[GitVersionClient.self] = newValue }
-  }
-}
-
-public extension ShellCommand {
-  static func gitCurrentSha(gitDirectory: String? = nil) -> Self {
-    GitVersion(workingDirectory: gitDirectory).command(for: .commit)
-  }
-
-  static func gitCurrentBranch(gitDirectory: String? = nil) -> Self {
-    GitVersion(workingDirectory: gitDirectory).command(for: .branch)
-  }
-
-  static func gitCurrentTag(gitDirectory: String? = nil) -> Self {
-    GitVersion(workingDirectory: gitDirectory).command(for: .describe)
   }
 }
 
@@ -78,11 +64,11 @@ private struct GitVersion {
 
   let workingDirectory: String?
 
-  func currentVersion() async throws -> String {
+  func currentVersion(_ exactMatch: Bool) async throws -> String {
     logger.debug("\("Fetching current version".bold)")
     do {
       logger.debug("Checking for tag.")
-      return try await run(command: command(for: .describe))
+      return try await run(command: command(for: .describe(exactMatch: exactMatch)))
     } catch {
       logger.debug("\("No tag found, deferring to branch & git sha".red)")
       let branch = try await run(command: command(for: .branch))
@@ -99,9 +85,7 @@ private struct GitVersion {
       argument.arguments.map(\.rawValue)
     )
   }
-}
 
-private extension GitVersion {
   func run(command: ShellCommand) async throws -> String {
     try await shell.background(command, trimmingCharactersIn: .whitespacesAndNewlines)
   }
@@ -109,7 +93,7 @@ private extension GitVersion {
   enum VersionArgs {
     case branch
     case commit
-    case describe
+    case describe(exactMatch: Bool)
 
     var arguments: [Args] {
       switch self {
@@ -117,8 +101,12 @@ private extension GitVersion {
         return [.git, .symbolicRef, .quiet, .short, .head]
       case .commit:
         return [.git, .revParse, .short, .head]
-      case .describe:
-        return [.git, .describe, .tags, .exactMatch]
+      case let .describe(exactMatch):
+        var args = [Args.git, .describe, .tags]
+        if exactMatch {
+          args.append(.exactMatch)
+        }
+        return args
       }
     }
 

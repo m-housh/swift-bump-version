@@ -6,7 +6,7 @@ import Foundation
 #endif
 import XCTestDynamicOverlay
 
-// TODO: Need a capturing version on write for tests.
+// TODO: This can be an internal dependency.
 
 public extension DependencyValues {
 
@@ -84,15 +84,27 @@ extension FileClient: DependencyKey {
     write: { try $0.write(to: $1, options: .atomic) }
   )
 
+  @_spi(Internal)
+  public static func capturing(
+    _ captured: CapturingWrite
+  ) -> Self {
+    .init(
+      fileExists: { _ in true },
+      read: { _ in "" },
+      write: { await captured.set($0, $1) }
+    )
+  }
+
 }
 
-private actor CapturingWrite {
-  var data: Data?
-  var url: URL?
+@_spi(Internal)
+public actor CapturingWrite: Sendable {
+  public private(set) var data: Data?
+  public private(set) var url: URL?
 
-  init() {}
+  public init() {}
 
-  func set(data: Data, url: URL) {
+  func set(_ data: Data, _ url: URL) {
     self.data = data
     self.url = url
   }
