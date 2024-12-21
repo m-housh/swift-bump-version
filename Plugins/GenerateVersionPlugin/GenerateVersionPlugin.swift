@@ -1,5 +1,5 @@
-import PackagePlugin
 import Foundation
+import PackagePlugin
 
 @main
 struct GenerateVersionPlugin: CommandPlugin {
@@ -27,4 +27,3 @@ struct GenerateVersionPlugin: CommandPlugin {
     }
   }
 }
-

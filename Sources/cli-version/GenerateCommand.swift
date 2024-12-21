@@ -12,28 +12,13 @@ extension CliVersionCommand {
       version: VERSION ?? "0.0.0"
     )
 
-    @OptionGroup var shared: SharedOptions
+    @OptionGroup var globals: GlobalOptions
 
-    // TODO: Use CliClient
     func run() async throws {
-      @Dependency(\.logger) var logger: Logger
-      @Dependency(\.fileClient) var fileClient
-
-      let targetUrl = parseTarget(shared.target)
-      let fileUrl = targetUrl.appendingPathComponent(shared.fileName)
-
-      let fileString = fileUrl.fileString()
-
-      guard !FileManager.default.fileExists(atPath: fileUrl.absoluteString) else {
-        logger.info("File already exists at path.")
-        throw GenerationError.fileExists(path: fileString)
-      }
-
-      if !shared.dryRun {
-        try await fileClient.write(string: optionalTemplate, to: fileUrl)
-        logger.info("Generated file at: \(fileString)")
-      } else {
-        logger.info("Would generate file at: \(fileString)")
+      try await globals.run {
+        @Dependency(\.cliClient) var cliClient
+        let output = try await cliClient.generate(globals.shared)
+        print(output)
       }
     }
   }

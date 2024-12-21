@@ -34,26 +34,26 @@ public struct CliClient: Sendable {
     case major, minor, patch
   }
 
-  // TODO: Use Int for `verbose`.
   public struct SharedOptions: Equatable, Sendable {
-    let gitDirectory: String?
+
     let dryRun: Bool
     let fileName: String
+    let gitDirectory: String?
+    let logLevel: Logger.Level
     let target: String
-    let verbose: Bool
 
     public init(
       gitDirectory: String? = nil,
       dryRun: Bool = false,
       fileName: String = "Version.swift",
       target: String,
-      verbose: Bool = true
+      logLevel: Logger.Level = .debug
     ) {
       self.gitDirectory = gitDirectory
       self.dryRun = dryRun
       self.fileName = fileName
       self.target = target
-      self.verbose = verbose
+      self.logLevel = logLevel
     }
   }
 
@@ -101,7 +101,7 @@ public extension CliClient.SharedOptions {
     _ operation: () async throws -> T
   ) async rethrows -> T {
     try await withDependencies {
-      $0.logger.logLevel = .init(verbose: verbose)
+      $0.logger.logLevel = logLevel
     } operation: {
       try await operation()
     }
@@ -114,6 +114,7 @@ public extension CliClient.SharedOptions {
       try await fileClient.write(string: string, to: url)
     } else {
       logger.debug("Skipping, due to dry-run being passed.")
+      logger.debug("\(string)")
     }
   }
 }
@@ -147,7 +148,7 @@ private extension CliClient.SharedOptions {
     }
   }
 
-  private func getVersionString() async throws -> (String, Bool) {
+  private func getVersionString() async throws -> (version: String, usesOptionalType: Bool) {
     @Dependency(\.fileClient) var fileClient
     @Dependency(\.gitVersionClient) var gitVersionClient
     @Dependency(\.logger) var logger
@@ -290,6 +291,10 @@ public struct Template: Sendable {
   }
 
   public static func build(_ version: String? = nil) -> String {
+    nonOptional(version)
+  }
+
+  public static func nonOptional(_ version: String? = nil) -> String {
     Self(type: .string, version: version).value
   }
 

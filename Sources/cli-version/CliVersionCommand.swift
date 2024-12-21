@@ -8,6 +8,7 @@ struct CliVersionCommand: AsyncParsableCommand {
     version: VERSION ?? "0.0.0",
     subcommands: [
       Build.self,
+      Bump.self,
       Generate.self,
       Update.self
     ]

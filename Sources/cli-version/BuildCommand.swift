@@ -10,40 +10,13 @@ extension CliVersionCommand {
       discussion: "This should generally not be interacted with directly, outside of the build plugin."
     )
 
-    @OptionGroup var shared: SharedOptions
+    @OptionGroup var globals: GlobalOptions
 
-    @Option(
-      name: .customLong("git-directory"),
-      help: "The git directory for the version."
-    )
-    var gitDirectory: String
-
-    // TODO: Use CliClient
     func run() async throws {
-      try await withDependencies {
-        $0.logger.logLevel = .debug
-        $0.fileClient = .liveValue
-        $0.gitVersionClient = .liveValue
-      } operation: {
-        @Dependency(\.gitVersionClient) var gitVersion
-        @Dependency(\.fileClient) var fileClient
-        @Dependency(\.logger) var logger: Logger
-
-        logger.info("Building with git-directory: \(gitDirectory)")
-
-        let fileUrl = URL(fileURLWithPath: shared.target)
-          .appendingPathComponent(shared.fileName)
-
-        let fileString = fileUrl.fileString()
-        logger.info("File Url: \(fileString)")
-
-        let currentVersion = try await gitVersion.currentVersion(in: gitDirectory)
-
-        let fileContents = buildTemplate
-          .replacingOccurrences(of: "nil", with: "\"\(currentVersion)\"")
-
-        try await fileClient.write(string: fileContents, to: fileUrl)
-        logger.info("Updated version file: \(fileString)")
+      try await globals.run {
+        @Dependency(\.cliClient) var cliClient
+        let output = try await cliClient.build(globals.shared)
+        print(output)
       }
     }
   }

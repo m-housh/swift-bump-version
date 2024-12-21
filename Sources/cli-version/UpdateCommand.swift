@@ -12,45 +12,13 @@ extension CliVersionCommand {
       discussion: "This command can be interacted with directly outside of the plugin context."
     )
 
-    @OptionGroup var shared: SharedOptions
+    @OptionGroup var globals: GlobalOptions
 
-    @Option(
-      name: .customLong("git-directory"),
-      help: "The git directory for the version."
-    )
-    var gitDirectory: String?
-
-    // TODO: Use CliClient
     func run() async throws {
-      try await withDependencies {
-        $0.logger.logLevel = shared.verbose ? .debug : .info
-        $0.fileClient = .liveValue
-        $0.gitVersionClient = .liveValue
-        $0.asyncShellClient = .liveValue
-      } operation: {
-        @Dependency(\.gitVersionClient) var gitVersion
-        @Dependency(\.fileClient) var fileClient
-        @Dependency(\.logger) var logger
-        @Dependency(\.asyncShellClient) var shell
-
-        let targetUrl = parseTarget(shared.target)
-        let fileUrl = targetUrl
-          .appendingPathComponent(shared.fileName)
-
-        let fileString = fileUrl.fileString()
-
-        let currentVersion = try await gitVersion.currentVersion(in: gitDirectory)
-
-        let fileContents = optionalTemplate
-          .replacingOccurrences(of: "nil", with: "\"\(currentVersion)\"")
-
-        if !shared.dryRun {
-          try await fileClient.write(string: fileContents, to: fileUrl)
-          logger.info("Updated version file: \(fileString)")
-        } else {
-          logger.info("Would update file contents to:")
-          logger.info("\(fileContents)")
-        }
+      try await globals.run {
+        @Dependency(\.cliClient) var cliClient
+        let output = try await cliClient.update(globals.shared)
+        print(output)
       }
     }
   }
