@@ -14,10 +14,17 @@ public extension DependencyValues {
   }
 }
 
+/// Handles the command-line commands.
 @DependencyClient
 public struct CliClient {
+
+  /// Build and update the version based on the git tag, or branch + sha.
   public var build: @Sendable (BuildOptions) throws -> String
+
+  /// Generate a version file with an optional version that can be set manually.
   public var generate: @Sendable (GenerateOptions) throws -> String
+
+  /// Update a version file manually.
   public var update: @Sendable (UpdateOptions) throws -> String
 }
 
