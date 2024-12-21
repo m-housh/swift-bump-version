@@ -33,7 +33,7 @@ public struct FileClient: Sendable {
   public var read: @Sendable (URL) throws -> String
 
   /// Write `Data` to a file `URL`.
-  public private(set) var write: @Sendable (Data, URL) throws -> Void
+  public var write: @Sendable (Data, URL) throws -> Void
 
   /// Read the contents of a file at the given path.
   ///

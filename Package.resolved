@@ -1,4 +1,5 @@
 {
+  "originHash" : "07a243cd8c2ed649f5fe5e76202ed091834801a0637c8b7785404e20b9e0cac1",
   "pins" : [
     {
       "identity" : "combine-schedulers",
@@ -95,8 +96,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/m-housh/swift-shell-client.git",
       "state" : {
-        "revision" : "9c0c4757d0a2e313d1a4a28e60418a753d3e4230",
-        "version" : "0.1.4"
+        "revision" : "ea819f41b87aa94e792f028a031f5db786e79a94",
+        "version" : "0.2.1"
       }
     },
     {
@@ -118,5 +119,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }

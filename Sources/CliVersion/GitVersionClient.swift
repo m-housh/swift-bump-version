@@ -119,7 +119,7 @@ private struct GitVersion {
       shell: .env,
       environment: nil,
       in: workingDirectory ?? FileManager.default.currentDirectoryPath,
-      argument.arguments
+      argument.arguments.map(\.rawValue)
     )
   }
 }

@@ -5,7 +5,7 @@ import PackageDescription
 let package = Package(
   name: "swift-cli-version",
   platforms: [
-    .macOS(.v10_15)
+    .macOS(.v13)
   ],
   products: [
     .library(name: "CliVersion", targets: ["CliVersion"]),
@@ -15,7 +15,7 @@ let package = Package(
   ],
   dependencies: [
     .package(url: "https://github.com/pointfreeco/swift-dependencies.git", from: "1.6.2"),
-    .package(url: "https://github.com/m-housh/swift-shell-client.git", from: "0.1.3"),
+    .package(url: "https://github.com/m-housh/swift-shell-client.git", from: "0.2.0"),
     .package(url: "https://github.com/apple/swift-docc-plugin.git", from: "1.0.0"),
     .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.2.2")
   ],

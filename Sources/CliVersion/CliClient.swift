@@ -16,16 +16,46 @@ public extension DependencyValues {
 
 /// Handles the command-line commands.
 @DependencyClient
-public struct CliClient {
+public struct CliClient: Sendable {
 
   /// Build and update the version based on the git tag, or branch + sha.
-  public var build: @Sendable (BuildOptions) throws -> String
+  public var build: @Sendable (SharedOptions) async throws -> String
+
+  public var bump: @Sendable (BumpOption, SharedOptions) async throws -> String
 
   /// Generate a version file with an optional version that can be set manually.
-  public var generate: @Sendable (GenerateOptions) throws -> String
+  public var generate: @Sendable (SharedOptions) async throws -> String
 
   /// Update a version file manually.
-  public var update: @Sendable (UpdateOptions) throws -> String
+  public var update: @Sendable (SharedOptions) async throws -> String
+
+  public enum BumpOption: Sendable, CaseIterable {
+    case major, minor, patch
+  }
+
+  // TODO: Use Int for `verbose`.
+  public struct SharedOptions: Equatable, Sendable {
+    let gitDirectory: String?
+    let dryRun: Bool
+    let fileName: String
+    let target: String
+    let verbose: Bool
+
+    public init(
+      gitDirectory: String? = nil,
+      dryRun: Bool = false,
+      fileName: String = "Version.swift",
+      target: String,
+      verbose: Bool = true
+    ) {
+      self.gitDirectory = gitDirectory
+      self.dryRun = dryRun
+      self.fileName = fileName
+      self.target = target
+      self.verbose = verbose
+    }
+  }
+
 }
 
 extension CliClient: DependencyKey {
@@ -33,9 +63,10 @@ extension CliClient: DependencyKey {
 
   public static func live(environment: [String: String]) -> Self {
     .init(
-      build: { try $0.run(environment) },
-      generate: { try $0.run() },
-      update: { try $0.run() }
+      build: { try $0.build(environment) },
+      bump: { try $1.bump($0) },
+      generate: { try $0.generate() },
+      update: { try $0.update() }
     )
   }
 
@@ -44,82 +75,24 @@ extension CliClient: DependencyKey {
   }
 }
 
-public extension CliClient {
-
-  // TODO: Use Int for `verbose`.
-  struct SharedOptions: Sendable {
-    let dryRun: Bool
-    let fileName: String
-    let target: String
-    let verbose: Bool
-
-    public init(
-      dryRun: Bool = false,
-      fileName: String,
-      target: String,
-      verbose: Bool = true
-    ) {
-      self.dryRun = dryRun
-      self.fileName = fileName
-      self.target = target
-      self.verbose = verbose
-    }
-  }
-
-  struct BuildOptions: Sendable {
-    let gitDirectory: String?
-    let shared: SharedOptions
-
-    public init(
-      gitDirectory: String? = nil,
-      shared: SharedOptions
-    ) {
-      self.gitDirectory = gitDirectory
-      self.shared = shared
-    }
-  }
-
-  struct GenerateOptions: Sendable {
-    let shared: SharedOptions
-
-    public init(shared: SharedOptions) {
-      self.shared = shared
-    }
-  }
-
-  struct UpdateOptions: Sendable {
-    let gitDirectory: String?
-    let shared: SharedOptions
-
-    public init(
-      gitDirectory: String? = nil,
-      shared: SharedOptions
-    ) {
-      self.gitDirectory = gitDirectory
-      self.shared = shared
-    }
-  }
-}
-
 // MARK: Private
 
 @_spi(Internal)
 public extension CliClient.SharedOptions {
+
   var fileUrl: URL {
-    url(for: target).appendingPathComponent(fileName)
-  }
+    let target = self.target.hasPrefix(".") ? String(self.target.dropFirst()) : self.target
+    let targetHasSources = target.hasPrefix("Sources") || target.hasPrefix("/Sources")
 
-  func parseTarget() throws -> URL {
-    let targetUrl = fileUrl
-      .deletingLastPathComponent()
-      .deletingLastPathComponent()
-
-    guard targetUrl.lastPathComponent == "Sources" else {
-      return url(for: "Sources")
-        .appendingPathComponent(target)
-        .appendingPathComponent(fileName)
+    var url = url(for: gitDirectory ?? (targetHasSources ? target : "Sources"))
+    if gitDirectory != nil {
+      if !targetHasSources {
+        url.appendPathComponent("Sources")
+      }
+      url.appendPathComponent(target)
     }
-    return fileUrl
+    url.appendPathComponent(fileName)
+    return url
   }
 
   @discardableResult
@@ -134,10 +107,10 @@ public extension CliClient.SharedOptions {
   }
 }
 
-private extension CliClient.BuildOptions {
+private extension CliClient.SharedOptions {
 
-  func run(_ environment: [String: String]) throws -> String {
-    try shared.run {
+  func build(_ environment: [String: String]) throws -> String {
+    try run {
       @Dependency(\.gitVersionClient) var gitVersion
       @Dependency(\.fileClient) var fileClient
       @Dependency(\.logger) var logger
@@ -150,28 +123,74 @@ private extension CliClient.BuildOptions {
 
       logger.debug("Building with git directory: \(gitDirectory)")
 
-      let fileUrl = shared.fileUrl
+      let fileUrl = self.fileUrl
       logger.debug("File url: \(fileUrl.cleanFilePath)")
 
       let currentVersion = try gitVersion.currentVersion(in: gitDirectory)
 
-      let fileContents = buildTemplate
-        .replacingOccurrences(of: "nil", with: "\"\(currentVersion)\"")
+      let fileContents = Template.build(currentVersion)
 
       try fileClient.write(string: fileContents, to: fileUrl)
 
       return fileUrl.cleanFilePath
     }
   }
-}
 
-private extension CliClient.GenerateOptions {
-
-  func run() throws -> String {
+  func bump(_ type: CliClient.BumpOption) throws -> String {
     @Dependency(\.fileClient) var fileClient
     @Dependency(\.logger) var logger
 
-    let targetUrl = try shared.parseTarget()
+    let targetUrl = fileUrl
+
+    logger.debug("Bump target url: \(targetUrl.cleanFilePath)")
+
+    let contents = try fileClient.read(fileUrl.cleanFilePath)
+    let versionLine = contents.split(separator: "\n")
+      .first { $0.hasPrefix("let VERSION:") }
+
+    guard let versionLine else {
+      throw CliClientError.failedToParseVersionFile
+    }
+
+    let isOptional = versionLine.contains("String?")
+    let versionString = versionLine.split(separator: "let VERSION: \(isOptional ? "String?" : "String") = ").last
+    guard let versionString else {
+      throw CliClientError.failedToParseVersionFile
+    }
+
+    let parts = String(versionString).split(separator: ".")
+    logger.debug("Version parts: \(parts)")
+
+    // TODO: Better error.
+    guard parts.count == 3 else {
+      throw CliClientError.failedToParseVersionFile
+    }
+
+    var major = Int(String(parts[0])) ?? 0
+    var minor = Int(String(parts[1])) ?? 0
+    var patch = Int(String(parts[2])) ?? 0
+
+    type.bump(major: &major, minor: &minor, patch: &patch)
+
+    let version = "\(major).\(minor).\(patch)"
+    logger.debug("Bumped version: \(version)")
+
+    let template = isOptional ? Template.optional(version) : Template.build(version)
+
+    if !dryRun {
+      try fileClient.write(string: template, to: targetUrl)
+    } else {
+      logger.debug("Skipping, due to dry-run being passed.")
+    }
+
+    return targetUrl.cleanFilePath
+  }
+
+  func generate(_ version: String? = nil) throws -> String {
+    @Dependency(\.fileClient) var fileClient
+    @Dependency(\.logger) var logger
+
+    let targetUrl = fileUrl
 
     logger.debug("Generate target url: \(targetUrl.cleanFilePath)")
 
@@ -179,37 +198,68 @@ private extension CliClient.GenerateOptions {
       throw CliClientError.fileExists(path: targetUrl.cleanFilePath)
     }
 
-    if !shared.dryRun {
-      try fileClient.write(string: optionalTemplate, to: targetUrl)
+    let template = Template.optional(version)
+
+    if !dryRun {
+      try fileClient.write(string: template, to: targetUrl)
     } else {
       logger.debug("Skipping, due to dry-run being passed.")
     }
     return targetUrl.cleanFilePath
   }
+
+  func update() throws -> String {
+    @Dependency(\.gitVersionClient) var gitVersionClient
+    return try generate(gitVersionClient.currentVersion(in: gitDirectory))
+  }
 }
 
-private extension CliClient.UpdateOptions {
+@_spi(Internal)
+public extension CliClient.BumpOption {
 
-  func run() throws -> String {
-    @Dependency(\.fileClient) var fileClient
-    @Dependency(\.gitVersionClient) var gitVersionClient
-    @Dependency(\.logger) var logger
-
-    let targetUrl = try shared.parseTarget()
-    logger.debug("Target url: \(targetUrl.cleanFilePath)")
-
-    let currentVersion = try gitVersionClient.currentVersion(in: gitDirectory)
-
-    let fileContents = optionalTemplate
-      .replacingOccurrences(of: "nil", with: "\"\(currentVersion)\"")
-
-    if !shared.dryRun {
-      try fileClient.write(string: fileContents, to: targetUrl)
-    } else {
-      logger.debug("Skipping due to dry run being passed.")
-      logger.debug("Parsed version: \(currentVersion)")
+  func bump(
+    major: inout Int,
+    minor: inout Int,
+    patch: inout Int
+  ) {
+    switch self {
+    case .major:
+      major += 1
+      minor = 0
+      patch = 0
+    case .minor:
+      minor += 1
+      patch = 0
+    case .patch:
+      patch += 1
     }
-    return targetUrl.cleanFilePath
+  }
+}
+
+@_spi(Internal)
+public struct Template {
+  let type: TemplateType
+  let version: String?
+
+  enum TemplateType: String {
+    case optionalString = "String?"
+    case string = "String"
+  }
+
+  var value: String {
+    return """
+    // Do not set this variable, it is set during the build process.
+    let VERSION: \(type.rawValue) = \(version ?? "nil")
+
+    """
+  }
+
+  public static func build(_ version: String? = nil) -> String {
+    Self(type: .string, version: version).value
+  }
+
+  public static func optional(_ version: String? = nil) -> String {
+    Self(type: .optionalString, version: version).value
   }
 }
 
@@ -226,4 +276,5 @@ let VERSION: String = nil
 enum CliClientError: Error {
   case gitDirectoryNotFound
   case fileExists(path: String)
+  case failedToParseVersionFile
 }
