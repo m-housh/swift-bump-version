@@ -4,7 +4,7 @@ import Foundation
 import ShellClient
 
 extension CliVersionCommand {
-  struct Build: ParsableCommand {
+  struct Build: AsyncParsableCommand {
     static var configuration: CommandConfiguration = .init(
       abstract: "Used for the build with version plugin.",
       discussion: "This should generally not be interacted with directly, outside of the build plugin."
@@ -19,8 +19,8 @@ extension CliVersionCommand {
     var gitDirectory: String
 
     // TODO: Use CliClient
-    func run() throws {
-      try withDependencies {
+    func run() async throws {
+      try await withDependencies {
         $0.logger.logLevel = .debug
         $0.fileClient = .liveValue
         $0.gitVersionClient = .liveValue
@@ -37,12 +37,12 @@ extension CliVersionCommand {
         let fileString = fileUrl.fileString()
         logger.info("File Url: \(fileString)")
 
-        let currentVersion = try gitVersion.currentVersion(in: gitDirectory)
+        let currentVersion = try await gitVersion.currentVersion(in: gitDirectory)
 
         let fileContents = buildTemplate
           .replacingOccurrences(of: "nil", with: "\"\(currentVersion)\"")
 
-        try fileClient.write(string: fileContents, to: fileUrl)
+        try await fileClient.write(string: fileContents, to: fileUrl)
         logger.info("Updated version file: \(fileString)")
       }
     }

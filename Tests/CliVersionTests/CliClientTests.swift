@@ -8,7 +8,7 @@ import TestSupport
 struct CliClientTests {
 
   @Test(
-    arguments: TestTarget.testCases
+    arguments: TestArguments.testCases
   )
   func testBuild(target: String) async throws {
     try await run {
@@ -27,11 +27,12 @@ struct CliClientTests {
   }
 
   @Test(
-    arguments: CliClient.BumpOption.allCases
+    arguments: TestArguments.bumpCases
   )
-  func bump(type: CliClient.BumpOption) async throws {
+  func bump(type: CliClient.BumpOption, optional: Bool) async throws {
+    let template = optional ? Template.optional("1.0.0") : Template.build("1.0.0")
     try await run {
-      $0.fileClient.read = { _ in Template.optional("1.0.0") }
+      $0.fileClient.read = { _ in template }
     } operation: {
       let client = CliClient.liveValue
       let output = try await client.bump(
@@ -50,7 +51,7 @@ struct CliClientTests {
   }
 
   @Test(
-    arguments: TestTarget.testCases
+    arguments: TestArguments.testCases
   )
   func generate(target: String) async throws {
     // let (stream, continuation) = AsyncStream<Data>.makeStream()
@@ -68,7 +69,7 @@ struct CliClientTests {
   }
 
   @Test(
-    arguments: TestTarget.testCases
+    arguments: TestArguments.testCases
   )
   func update(target: String) async throws {
     // let (stream, continuation) = AsyncStream<Data>.makeStream()
@@ -101,6 +102,10 @@ struct CliClientTests {
   }
 }
 
-enum TestTarget {
+enum TestArguments {
   static let testCases = ["bar", "Sources/bar", "/Sources/bar", "./Sources/bar"]
+  static let bumpCases = CliClient.BumpOption.allCases.reduce(into: [(CliClient.BumpOption, Bool)]()) {
+    $0.append(($1, true))
+    $0.append(($1, false))
+  }
 }

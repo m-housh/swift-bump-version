@@ -2,6 +2,8 @@ import Foundation
 #if canImport(FoundationNetworking)
   import FoundationNetworking
 #endif
+import Dependencies
+import DependenciesMacros
 import ShellClient
 import XCTestDynamicOverlay
 
@@ -14,57 +16,32 @@ import XCTestDynamicOverlay
 /// that is supplied with this library.  The use case is to set the version of a command line
 /// tool based on the current git tag.
 ///
-public struct GitVersionClient {
+@DependencyClient
+public struct GitVersionClient: Sendable {
 
   /// The closure to run that returns the current version from a given
   /// git directory.
-  private var currentVersion: (String?) throws -> String
-
-  /// Create a new ``GitVersionClient`` instance.
-  ///
-  /// This is normally not interacted with directly, instead access the client through the dependency system.
-  /// ```swift
-  /// @Dependency(\.gitVersionClient)
-  /// ```
-  ///
-  /// - Parameters:
-  ///   - currentVersion: The closure that returns the current version.
-  ///
-  public init(currentVersion: @escaping (String?) throws -> String) {
-    self.currentVersion = currentVersion
-  }
+  public var currentVersion: @Sendable (String?) async throws -> String
 
   /// Get the current version from the `git tag` in the given directory.
   /// If a directory is not passed in, then we will use the current working directory.
   ///
   /// - Parameters:
   ///   - gitDirectory: The directory to run the command in.
-  public func currentVersion(in gitDirectory: String? = nil) throws -> String {
-    try currentVersion(gitDirectory)
-  }
-
-  /// Override the `currentVersion` command and return the passed in version string.
-  ///
-  /// This is useful for testing purposes.
-  ///
-  /// - Parameters:
-  ///   - version: The version string to return when `currentVersion` is called.
-  public mutating func override(with version: String) {
-    currentVersion = { _ in version }
+  public func currentVersion(in gitDirectory: String? = nil) async throws -> String {
+    try await currentVersion(gitDirectory)
   }
 }
 
 extension GitVersionClient: TestDependencyKey {
 
   /// The ``GitVersionClient`` used in test / debug builds.
-  public static let testValue = GitVersionClient(
-    currentVersion: unimplemented("\(Self.self).currentVersion", placeholder: "")
-  )
+  public static let testValue = GitVersionClient()
 
   /// The ``GitVersionClient`` used in release builds.
   public static var liveValue: GitVersionClient {
     .init(currentVersion: { gitDirectory in
-      try GitVersion(workingDirectory: gitDirectory).currentVersion()
+      try await GitVersion(workingDirectory: gitDirectory).currentVersion()
     })
   }
 }
@@ -97,19 +74,19 @@ public extension ShellCommand {
 
 private struct GitVersion {
   @Dependency(\.logger) var logger: Logger
-  @Dependency(\.shellClient) var shell: ShellClient
+  @Dependency(\.asyncShellClient) var shell
 
   let workingDirectory: String?
 
-  func currentVersion() throws -> String {
+  func currentVersion() async throws -> String {
     logger.debug("\("Fetching current version".bold)")
     do {
       logger.debug("Checking for tag.")
-      return try run(command: command(for: .describe))
+      return try await run(command: command(for: .describe))
     } catch {
       logger.debug("\("No tag found, deferring to branch & git sha".red)")
-      let branch = try run(command: command(for: .branch))
-      let commit = try run(command: command(for: .commit))
+      let branch = try await run(command: command(for: .branch))
+      let commit = try await run(command: command(for: .commit))
       return "\(branch) \(commit)"
     }
   }
@@ -125,8 +102,8 @@ private struct GitVersion {
 }
 
 private extension GitVersion {
-  func run(command: ShellCommand) throws -> String {
-    try shell.background(command, trimmingCharactersIn: .whitespacesAndNewlines)
+  func run(command: ShellCommand) async throws -> String {
+    try await shell.background(command, trimmingCharactersIn: .whitespacesAndNewlines)
   }
 
   enum VersionArgs {

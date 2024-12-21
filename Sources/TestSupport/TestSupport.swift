@@ -9,14 +9,14 @@ import Foundation
 /// - Parameters:
 ///   - operation: The operation to run with the temporary directory.
 public func withTemporaryDirectory(
-  _ operation: (URL) throws -> Void
-) rethrows {
+  _ operation: (URL) async throws -> Void
+) async rethrows {
   let tempUrl = FileManager.default
     .temporaryDirectory
     .appendingPathComponent(UUID().uuidString)
 
   try! FileManager.default.createDirectory(at: tempUrl, withIntermediateDirectories: false)
-  try operation(tempUrl)
+  try await operation(tempUrl)
   try! FileManager.default.removeItem(at: tempUrl)
 }
 

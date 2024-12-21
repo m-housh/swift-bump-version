@@ -6,7 +6,7 @@ import ShellClient
 
 extension CliVersionCommand {
 
-  struct Update: ParsableCommand {
+  struct Update: AsyncParsableCommand {
     static var configuration: CommandConfiguration = .init(
       abstract: "Updates a version string to the git tag or git sha.",
       discussion: "This command can be interacted with directly outside of the plugin context."
@@ -21,17 +21,17 @@ extension CliVersionCommand {
     var gitDirectory: String?
 
     // TODO: Use CliClient
-    func run() throws {
-      try withDependencies {
+    func run() async throws {
+      try await withDependencies {
         $0.logger.logLevel = shared.verbose ? .debug : .info
         $0.fileClient = .liveValue
         $0.gitVersionClient = .liveValue
-        $0.shellClient = .liveValue
+        $0.asyncShellClient = .liveValue
       } operation: {
         @Dependency(\.gitVersionClient) var gitVersion
         @Dependency(\.fileClient) var fileClient
         @Dependency(\.logger) var logger
-        @Dependency(\.shellClient) var shell
+        @Dependency(\.asyncShellClient) var shell
 
         let targetUrl = parseTarget(shared.target)
         let fileUrl = targetUrl
@@ -39,13 +39,13 @@ extension CliVersionCommand {
 
         let fileString = fileUrl.fileString()
 
-        let currentVersion = try gitVersion.currentVersion(in: gitDirectory)
+        let currentVersion = try await gitVersion.currentVersion(in: gitDirectory)
 
         let fileContents = optionalTemplate
           .replacingOccurrences(of: "nil", with: "\"\(currentVersion)\"")
 
         if !shared.dryRun {
-          try fileClient.write(string: fileContents, to: fileUrl)
+          try await fileClient.write(string: fileContents, to: fileUrl)
           logger.info("Updated version file: \(fileString)")
         } else {
           logger.info("Would update file contents to:")

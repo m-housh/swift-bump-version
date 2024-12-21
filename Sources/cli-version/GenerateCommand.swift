@@ -5,7 +5,7 @@ import Foundation
 import ShellClient
 
 extension CliVersionCommand {
-  struct Generate: ParsableCommand {
+  struct Generate: AsyncParsableCommand {
     static var configuration: CommandConfiguration = .init(
       abstract: "Generates a version file in a command line tool that can be set via the git tag or git sha.",
       discussion: "This command can be interacted with directly, outside of the plugin usage context.",
@@ -15,7 +15,7 @@ extension CliVersionCommand {
     @OptionGroup var shared: SharedOptions
 
     // TODO: Use CliClient
-    func run() throws {
+    func run() async throws {
       @Dependency(\.logger) var logger: Logger
       @Dependency(\.fileClient) var fileClient
 
@@ -30,7 +30,7 @@ extension CliVersionCommand {
       }
 
       if !shared.dryRun {
-        try fileClient.write(string: optionalTemplate, to: fileUrl)
+        try await fileClient.write(string: optionalTemplate, to: fileUrl)
         logger.info("Generated file at: \(fileString)")
       } else {
         logger.info("Would generate file at: \(fileString)")

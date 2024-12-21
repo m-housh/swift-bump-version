@@ -6,6 +6,8 @@ import Foundation
 #endif
 import XCTestDynamicOverlay
 
+// TODO: Need a capturing version on write for tests.
+
 public extension DependencyValues {
 
   /// Access a basic ``FileClient`` that can read / write data to the file system.
@@ -27,20 +29,21 @@ public extension DependencyValues {
 @DependencyClient
 public struct FileClient: Sendable {
 
+  /// Check if a file exists at the given url.
   public var fileExists: @Sendable (URL) -> Bool = { _ in true }
 
   /// Read the contents of a file.
-  public var read: @Sendable (URL) throws -> String
+  public var read: @Sendable (URL) async throws -> String
 
   /// Write `Data` to a file `URL`.
-  public var write: @Sendable (Data, URL) throws -> Void
+  public var write: @Sendable (Data, URL) async throws -> Void
 
   /// Read the contents of a file at the given path.
   ///
   /// - Parameters:
   ///   - path: The file path to read from.
-  public func read(_ path: String) throws -> String {
-    try read(url(for: path))
+  public func read(_ path: String) async throws -> String {
+    try await read(url(for: path))
   }
 
   /// Write's the the string to a  file path.
@@ -48,9 +51,8 @@ public struct FileClient: Sendable {
   /// - Parameters:
   ///   - string: The string to write to the file.
   ///   - path: The file path.
-  public func write(string: String, to path: String) throws {
-    let url = url(for: path)
-    try write(string: string, to: url)
+  public func write(string: String, to path: String) async throws {
+    try await write(string: string, to: url(for: path))
   }
 
   /// Write's the the string to a  file path.
@@ -58,8 +60,8 @@ public struct FileClient: Sendable {
   /// - Parameters:
   ///   - string: The string to write to the file.
   ///   - url: The file url.
-  public func write(string: String, to url: URL) throws {
-    try write(Data(string.utf8), url)
+  public func write(string: String, to url: URL) async throws {
+    try await write(Data(string.utf8), url)
   }
 }
 
@@ -82,4 +84,16 @@ extension FileClient: DependencyKey {
     write: { try $0.write(to: $1, options: .atomic) }
   )
 
+}
+
+private actor CapturingWrite {
+  var data: Data?
+  var url: URL?
+
+  init() {}
+
+  func set(data: Data, url: URL) {
+    self.data = data
+    self.url = url
+  }
 }

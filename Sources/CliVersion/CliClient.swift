@@ -21,6 +21,7 @@ public struct CliClient: Sendable {
   /// Build and update the version based on the git tag, or branch + sha.
   public var build: @Sendable (SharedOptions) async throws -> String
 
+  /// Bump the existing version.
   public var bump: @Sendable (BumpOption, SharedOptions) async throws -> String
 
   /// Generate a version file with an optional version that can be set manually.
@@ -63,10 +64,10 @@ extension CliClient: DependencyKey {
 
   public static func live(environment: [String: String]) -> Self {
     .init(
-      build: { try $0.build(environment) },
-      bump: { try $1.bump($0) },
-      generate: { try $0.generate() },
-      update: { try $0.update() }
+      build: { try await $0.build(environment) },
+      bump: { try await $1.bump($0) },
+      generate: { try await $0.generate() },
+      update: { try await $0.update() }
     )
   }
 
@@ -97,20 +98,20 @@ public extension CliClient.SharedOptions {
 
   @discardableResult
   func run<T>(
-    _ operation: () throws -> T
-  ) rethrows -> T {
-    try withDependencies {
+    _ operation: () async throws -> T
+  ) async rethrows -> T {
+    try await withDependencies {
       $0.logger.logLevel = .init(verbose: verbose)
     } operation: {
-      try operation()
+      try await operation()
     }
   }
 }
 
 private extension CliClient.SharedOptions {
 
-  func build(_ environment: [String: String]) throws -> String {
-    try run {
+  func build(_ environment: [String: String]) async throws -> String {
+    try await run {
       @Dependency(\.gitVersionClient) var gitVersion
       @Dependency(\.fileClient) var fileClient
       @Dependency(\.logger) var logger
@@ -126,91 +127,95 @@ private extension CliClient.SharedOptions {
       let fileUrl = self.fileUrl
       logger.debug("File url: \(fileUrl.cleanFilePath)")
 
-      let currentVersion = try gitVersion.currentVersion(in: gitDirectory)
+      let currentVersion = try await gitVersion.currentVersion(in: gitDirectory)
 
       let fileContents = Template.build(currentVersion)
 
-      try fileClient.write(string: fileContents, to: fileUrl)
+      try await fileClient.write(string: fileContents, to: fileUrl)
 
       return fileUrl.cleanFilePath
     }
   }
 
-  func bump(_ type: CliClient.BumpOption) throws -> String {
-    @Dependency(\.fileClient) var fileClient
-    @Dependency(\.logger) var logger
+  func bump(_ type: CliClient.BumpOption) async throws -> String {
+    try await run {
+      @Dependency(\.fileClient) var fileClient
+      @Dependency(\.logger) var logger
 
-    let targetUrl = fileUrl
+      let targetUrl = fileUrl
 
-    logger.debug("Bump target url: \(targetUrl.cleanFilePath)")
+      logger.debug("Bump target url: \(targetUrl.cleanFilePath)")
 
-    let contents = try fileClient.read(fileUrl.cleanFilePath)
-    let versionLine = contents.split(separator: "\n")
-      .first { $0.hasPrefix("let VERSION:") }
+      let contents = try await fileClient.read(fileUrl)
+      let versionLine = contents.split(separator: "\n")
+        .first { $0.hasPrefix("let VERSION:") }
 
-    guard let versionLine else {
-      throw CliClientError.failedToParseVersionFile
+      guard let versionLine else {
+        throw CliClientError.failedToParseVersionFile
+      }
+
+      let isOptional = versionLine.contains("String?")
+      let versionString = versionLine.split(separator: "let VERSION: \(isOptional ? "String?" : "String") = ").last
+      guard let versionString else {
+        throw CliClientError.failedToParseVersionFile
+      }
+
+      let parts = String(versionString).split(separator: ".")
+      logger.debug("Version parts: \(parts)")
+
+      // TODO: Better error.
+      guard parts.count == 3 else {
+        throw CliClientError.failedToParseVersionFile
+      }
+
+      var major = Int(String(parts[0])) ?? 0
+      var minor = Int(String(parts[1])) ?? 0
+      var patch = Int(String(parts[2])) ?? 0
+
+      type.bump(major: &major, minor: &minor, patch: &patch)
+
+      let version = "\(major).\(minor).\(patch)"
+      logger.debug("Bumped version: \(version)")
+
+      let template = isOptional ? Template.optional(version) : Template.build(version)
+
+      if !dryRun {
+        try await fileClient.write(string: template, to: targetUrl)
+      } else {
+        logger.debug("Skipping, due to dry-run being passed.")
+      }
+
+      return targetUrl.cleanFilePath
     }
-
-    let isOptional = versionLine.contains("String?")
-    let versionString = versionLine.split(separator: "let VERSION: \(isOptional ? "String?" : "String") = ").last
-    guard let versionString else {
-      throw CliClientError.failedToParseVersionFile
-    }
-
-    let parts = String(versionString).split(separator: ".")
-    logger.debug("Version parts: \(parts)")
-
-    // TODO: Better error.
-    guard parts.count == 3 else {
-      throw CliClientError.failedToParseVersionFile
-    }
-
-    var major = Int(String(parts[0])) ?? 0
-    var minor = Int(String(parts[1])) ?? 0
-    var patch = Int(String(parts[2])) ?? 0
-
-    type.bump(major: &major, minor: &minor, patch: &patch)
-
-    let version = "\(major).\(minor).\(patch)"
-    logger.debug("Bumped version: \(version)")
-
-    let template = isOptional ? Template.optional(version) : Template.build(version)
-
-    if !dryRun {
-      try fileClient.write(string: template, to: targetUrl)
-    } else {
-      logger.debug("Skipping, due to dry-run being passed.")
-    }
-
-    return targetUrl.cleanFilePath
   }
 
-  func generate(_ version: String? = nil) throws -> String {
-    @Dependency(\.fileClient) var fileClient
-    @Dependency(\.logger) var logger
+  func generate(_ version: String? = nil) async throws -> String {
+    try await run {
+      @Dependency(\.fileClient) var fileClient
+      @Dependency(\.logger) var logger
 
-    let targetUrl = fileUrl
+      let targetUrl = fileUrl
 
-    logger.debug("Generate target url: \(targetUrl.cleanFilePath)")
+      logger.debug("Generate target url: \(targetUrl.cleanFilePath)")
 
-    guard !fileClient.fileExists(targetUrl) else {
-      throw CliClientError.fileExists(path: targetUrl.cleanFilePath)
+      guard !fileClient.fileExists(targetUrl) else {
+        throw CliClientError.fileExists(path: targetUrl.cleanFilePath)
+      }
+
+      let template = Template.optional(version)
+
+      if !dryRun {
+        try await fileClient.write(string: template, to: targetUrl)
+      } else {
+        logger.debug("Skipping, due to dry-run being passed.")
+      }
+      return targetUrl.cleanFilePath
     }
-
-    let template = Template.optional(version)
-
-    if !dryRun {
-      try fileClient.write(string: template, to: targetUrl)
-    } else {
-      logger.debug("Skipping, due to dry-run being passed.")
-    }
-    return targetUrl.cleanFilePath
   }
 
-  func update() throws -> String {
+  func update() async throws -> String {
     @Dependency(\.gitVersionClient) var gitVersionClient
-    return try generate(gitVersionClient.currentVersion(in: gitDirectory))
+    return try await generate(gitVersionClient.currentVersion(in: gitDirectory))
   }
 }
 
