@@ -15,7 +15,7 @@ struct CliClientTests {
     try await run {
       @Dependency(\.cliClient) var client
       let output = try await client.build(.testOptions(target: target))
-      #expect(output == "/baz/Sources/bar/foo")
+      #expect(output == "/baz/Sources/bar/Version.swift")
     }
   }
 
@@ -30,7 +30,7 @@ struct CliClientTests {
     } operation: {
       @Dependency(\.cliClient) var client
       let output = try await client.bump(type, .testOptions())
-      #expect(output == "/baz/Sources/bar/foo")
+      #expect(output == "/baz/Sources/bar/Version.swift")
     } assert: { string, _ in
 
       #expect(string != nil)
@@ -54,7 +54,7 @@ struct CliClientTests {
     try await run {
       @Dependency(\.cliClient) var client
       let output = try await client.generate(.testOptions(target: target))
-      #expect(output == "/baz/Sources/bar/foo")
+      #expect(output == "/baz/Sources/bar/Version.swift")
     }
   }
 
@@ -67,11 +67,23 @@ struct CliClientTests {
     } operation: {
       @Dependency(\.cliClient) var client
       let output = try await client.update(.testOptions(dryRun: dryRun, target: target))
-      #expect(output == "/baz/Sources/bar/foo")
+      #expect(output == "/baz/Sources/bar/Version.swift")
     } assert: { string, _ in
       if dryRun {
         #expect(string == nil)
       }
+    }
+  }
+
+  @Test(arguments: GitClient.Version.mocks)
+  func gitVersionToSemVar(version: GitClient.Version) {
+    let semVar = version.semVar
+    if semVar != nil {
+      #expect(semVar!.versionString(allowPrerelease: false) == "1.0.0")
+      #expect(semVar!.versionString(allowPrerelease: true) == version.description)
+    } else {
+      let semVar = SemVar(preRelease: version.description)
+      #expect(semVar.versionString(allowPrerelease: true) == "0.0.0-\(version.description)")
     }
   }
 
@@ -86,7 +98,7 @@ struct CliClientTests {
       $0.logger.logLevel = .debug
       $0.fileClient = .capturing(captured)
       $0.fileClient.fileExists = { _ in false }
-      $0.gitVersionClient = .init { _, _ in "1.0.0" }
+      $0.gitClient = .mock(.tag("1.0.0"))
       $0.cliClient = .liveValue
       setupDependencies(&$0)
     } operation: {
@@ -120,14 +132,12 @@ extension CliClient.SharedOptions {
   static func testOptions(
     gitDirectory: String? = "/baz",
     dryRun: Bool = false,
-    fileName: String = "foo",
     target: String = "bar",
     logLevel: Logger.Level = .trace
   ) -> Self {
     .init(
       gitDirectory: gitDirectory,
       dryRun: dryRun,
-      fileName: fileName,
       target: target,
       logLevel: logLevel
     )

@@ -70,7 +70,6 @@ extension GlobalOptions {
     .init(
       gitDirectory: gitDirectory,
       dryRun: dryRun,
-      fileName: fileName,
       target: target,
       logLevel: .init(verbose: verbose)
     )
@@ -79,7 +78,7 @@ extension GlobalOptions {
   func run(_ operation: () async throws -> Void) async throws {
     try await withDependencies {
       $0.fileClient = .liveValue
-      $0.gitVersionClient = .liveValue
+      $0.gitClient = .liveValue
       $0.cliClient = .liveValue
     } operation: {
       try await operation()

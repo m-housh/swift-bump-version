@@ -11,7 +11,7 @@ final class GitVersionTests: XCTestCase {
       $0.logger.logLevel = .debug
       $0.logger = .liveValue
       $0.asyncShellClient = .liveValue
-      $0.gitVersionClient = .liveValue
+      $0.gitClient = .liveValue
       $0.fileClient = .liveValue
     }, operation: {
       super.invokeTest()
@@ -27,31 +27,13 @@ final class GitVersionTests: XCTestCase {
   }
 
   func test_live() async throws {
-    @Dependency(\.gitVersionClient) var versionClient: GitVersionClient
+    @Dependency(\.gitClient) var versionClient: GitClient
 
     let version = try await versionClient.currentVersion(in: gitDir)
     print("VERSION: \(version)")
     // can't really have a predictable result for the live client.
     XCTAssertNotEqual(version, "blob")
   }
-
-  // func test_commands() throws {
-  //   @Dependency(\.asyncShellClient) var shellClient: ShellClient
-  //
-  //   XCTAssertNoThrow(
-  //     try shellClient.background(
-  //       .gitCurrentBranch(gitDirectory: gitDir),
-  //       trimmingCharactersIn: .whitespacesAndNewlines
-  //     )
-  //   )
-  //
-  //   XCTAssertNoThrow(
-  //     try shellClient.background(
-  //       .gitCurrentSha(gitDirectory: gitDir),
-  //       trimmingCharactersIn: .whitespacesAndNewlines
-  //     )
-  //   )
-  // }
 
   func test_file_client() async throws {
     try await withTemporaryDirectory { tmpDir in

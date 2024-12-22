@@ -8,6 +8,7 @@ import XCTestDynamicOverlay
 
 // TODO: This can be an internal dependency.
 
+@_spi(Internal)
 public extension DependencyValues {
 
   /// Access a basic ``FileClient`` that can read / write data to the file system.
@@ -26,11 +27,18 @@ public extension DependencyValues {
 ///  @Dependency(\.fileClient) var fileClient
 /// ```
 ///
+@_spi(Internal)
 @DependencyClient
 public struct FileClient: Sendable {
 
+  /// Return the current working directory.
+  public var currentDirectory: @Sendable () async throws -> String
+
   /// Check if a file exists at the given url.
   public var fileExists: @Sendable (URL) -> Bool = { _ in true }
+
+  /// Check if a url is a directory.
+  public var isDirectory: @Sendable (String) async throws -> Bool
 
   /// Read the contents of a file.
   public var read: @Sendable (URL) async throws -> String
@@ -65,11 +73,14 @@ public struct FileClient: Sendable {
   }
 }
 
+@_spi(Internal)
 extension FileClient: DependencyKey {
 
   /// A ``FileClient`` that does not do anything.
   public static let noop = FileClient(
+    currentDirectory: { "./" },
     fileExists: { _ in true },
+    isDirectory: { _ in true },
     read: { _ in "" },
     write: { _, _ in }
   )
@@ -79,17 +90,24 @@ extension FileClient: DependencyKey {
 
   /// The live ``FileClient``
   public static let liveValue = FileClient(
+    currentDirectory: { FileManager.default.currentDirectoryPath },
     fileExists: { FileManager.default.fileExists(atPath: $0.cleanFilePath) },
+    isDirectory: { path in
+      var isDirectory: ObjCBool = false
+      FileManager.default.fileExists(atPath: path, isDirectory: &isDirectory)
+      return isDirectory.boolValue
+    },
     read: { try String(contentsOf: $0, encoding: .utf8) },
     write: { try $0.write(to: $1, options: .atomic) }
   )
 
-  @_spi(Internal)
   public static func capturing(
     _ captured: CapturingWrite
   ) -> Self {
     .init(
+      currentDirectory: { "./" },
       fileExists: { _ in true },
+      isDirectory: { _ in true },
       read: { _ in "" },
       write: { await captured.set($0, $1) }
     )

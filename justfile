@@ -1,9 +1,20 @@
+product := cli-version
+
+[private]
+default:
+  @just --list
 
 build configuration="release":
-  @swift build --configuration {{configuration}}
+  @swift build \
+    --disable-sandbox \
+    --configuration {{configuration}} \
+    --product {{product}}
 
 run *ARGS:
-  @swift run cli-version {{ARGS}}
+  @swift run {{product}} {{ARGS}}
 
 clean:
   rm -rf .build
+
+test *ARGS:
+  @swift test {{ARGS}}
