@@ -1,6 +1,8 @@
 @_spi(Internal) import CliVersion
 import Dependencies
+import FileClient
 import Foundation
+import GitClient
 import Logging
 import Testing
 import TestSupport
@@ -79,11 +81,11 @@ struct CliClientTests {
   func gitVersionToSemVar(version: GitClient.Version) {
     let semVar = version.semVar
     if semVar != nil {
-      #expect(semVar!.versionString(allowPrerelease: false) == "1.0.0")
-      #expect(semVar!.versionString(allowPrerelease: true) == version.description)
+      #expect(semVar!.versionString(withPreReleaseTag: false) == "1.0.0")
+      #expect(semVar!.versionString(withPreReleaseTag: true) == version.description)
     } else {
       let semVar = SemVar(preRelease: version.description)
-      #expect(semVar.versionString(allowPrerelease: true) == "0.0.0-\(version.description)")
+      #expect(semVar.versionString(withPreReleaseTag: true) == "0.0.0-\(version.description)")
     }
   }
 

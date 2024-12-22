@@ -27,15 +27,30 @@ let package = Package(
         .product(name: "ArgumentParser", package: "swift-argument-parser")
       ]
     ),
-    .target(name: "TestSupport"),
     .target(
-      name: "CliVersion",
+      name: "FileClient",
       dependencies: [
+        .product(name: "Dependencies", package: "swift-dependencies"),
+        .product(name: "DependenciesMacros", package: "swift-dependencies")
+      ]
+    ),
+    .target(
+      name: "GitClient",
+      dependencies: [
+        "FileClient",
         .product(name: "Dependencies", package: "swift-dependencies"),
         .product(name: "DependenciesMacros", package: "swift-dependencies"),
         .product(name: "ShellClient", package: "swift-shell-client")
       ]
     ),
+    .target(
+      name: "CliVersion",
+      dependencies: [
+        "FileClient",
+        "GitClient"
+      ]
+    ),
+    .target(name: "TestSupport"),
     .testTarget(
       name: "CliVersionTests",
       dependencies: ["CliVersion", "TestSupport"]

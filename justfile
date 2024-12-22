@@ -1,4 +1,4 @@
-product := cli-version
+product := "cli-version"
 
 [private]
 default:

@@ -1,12 +1,9 @@
-import Foundation
-#if canImport(FoundationNetworking)
-  import FoundationNetworking
-#endif
 import Dependencies
 import DependenciesMacros
+import FileClient
+import Foundation
 import ShellClient
 
-@_spi(Internal)
 public extension DependencyValues {
 
   /// A ``GitVersionClient`` that can retrieve the current version from a
@@ -26,7 +23,6 @@ public extension DependencyValues {
 /// that is supplied with this library.  The use case is to set the version of a command line
 /// tool based on the current git tag.
 ///
-@_spi(Internal)
 @DependencyClient
 public struct GitClient: Sendable {
 
@@ -45,9 +41,12 @@ public struct GitClient: Sendable {
     try await currentVersion(gitDirectory, exactMatch)
   }
 
-  public var version: (CurrentVersionOption) async throws -> Version
+  public var version: @Sendable (CurrentVersionOption) async throws -> Version
 
-  public struct CurrentVersionOption: Sendable {
+}
+
+public extension GitClient {
+  struct CurrentVersionOption: Sendable {
     let gitDirectory: String?
     let style: Style
 
@@ -66,7 +65,7 @@ public struct GitClient: Sendable {
 
   }
 
-  public enum Version: Sendable, CustomStringConvertible {
+  enum Version: Sendable, CustomStringConvertible {
     case branch(String)
     case tag(String)
 
@@ -79,7 +78,6 @@ public struct GitClient: Sendable {
   }
 }
 
-@_spi(Internal)
 extension GitClient: TestDependencyKey {
 
   /// The ``GitVersionClient`` used in test / debug builds.
@@ -253,7 +251,6 @@ extension RawRepresentable where RawValue == String, Self: CustomStringConvertib
   var description: String { rawValue }
 }
 
-@_spi(Internal)
 public extension GitClient.Version {
   static var mocks: [Self] {
     [

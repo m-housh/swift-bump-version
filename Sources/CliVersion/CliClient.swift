@@ -1,9 +1,8 @@
-import Foundation
-#if canImport(FoundationNetworking)
-  import FoundationNetworking
-#endif
 import Dependencies
 import DependenciesMacros
+import FileClient
+import Foundation
+import GitClient
 import ShellClient
 
 public extension DependencyValues {
@@ -17,8 +16,6 @@ public extension DependencyValues {
 /// Handles the command-line commands.
 @DependencyClient
 public struct CliClient: Sendable {
-
-  static let defaultFileName = "Version.swift"
 
   /// Build and update the version based on the git tag, or branch + sha.
   public var build: @Sendable (SharedOptions) async throws -> String
@@ -101,7 +98,7 @@ public extension CliClient.SharedOptions {
     let isDirectory = try await fileClient.isDirectory(url.cleanFilePath)
 
     if isDirectory {
-      url.appendPathComponent(CliClient.defaultFileName)
+      url.appendPathComponent(Constants.defaultFileName)
     }
 
     return url
@@ -248,7 +245,7 @@ private extension CliClient.SharedOptions {
 
       let (versionString, usesOptional) = try await getVersionString()
       let semVar = try getSemVar(versionString, type)
-      let version = semVar.versionString(allowPrerelease: allowPreReleaseTag)
+      let version = semVar.versionString(withPreReleaseTag: allowPreReleaseTag)
       logger.debug("Bumped version: \(version)")
 
       let template = usesOptional ? Template.optional(version) : Template.build(version)

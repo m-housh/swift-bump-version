@@ -1,5 +1,7 @@
 @_spi(Internal) import CliVersion
 import Dependencies
+import FileClient
+import GitClient
 import ShellClient
 import TestSupport
 import XCTest

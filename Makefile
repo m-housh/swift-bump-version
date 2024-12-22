@@ -3,6 +3,7 @@ CONFIG := debug
 DOCC_TARGET ?= CliVersion
 DOCC_BASEPATH = $(shell basename "$(PWD)")
 DOCC_DIR ?= ./docs
+SWIFT_VERSION ?= "5.10"
 
 clean:
 	rm -rf .build
@@ -27,7 +28,7 @@ test-linux:
 	docker run --rm \
 		--volume "$(PWD):$(PWD)" \
 		--workdir "$(PWD)" \
-		swift:5.7-focal \
+		"swift:$(SWIFT_VERSION)" \
 		swift test
 
 test-library:
@@ -39,4 +40,3 @@ update-version:
 		--allow-writing-to-package-directory \
 		update-version \
 		git-version
-

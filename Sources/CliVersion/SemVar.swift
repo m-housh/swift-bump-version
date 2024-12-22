@@ -1,4 +1,5 @@
 import Foundation
+import GitClient
 
 // Container for sem-var version.
 @_spi(Internal)
