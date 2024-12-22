@@ -7,24 +7,28 @@ struct GenerateVersionBuildPlugin: BuildToolPlugin {
     context: PackagePlugin.PluginContext,
     target: PackagePlugin.Target
   ) async throws -> [PackagePlugin.Command] {
-    guard let target = target as? SourceModuleTarget else { return [] }
+    guard let target = target as? SwiftSourceModuleTarget else { return [] }
 
-    let gitDirectoryPath = target.directory
-      .removingLastComponent()
-      .removingLastComponent()
+    let gitDirectoryPath = target.directoryURL
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
 
     let tool = try context.tool(named: "cli-version")
-    let outputPath = context.pluginWorkDirectory
+    let outputPath = context.pluginWorkDirectoryURL
 
-    let outputFile = outputPath.appending("Version.swift")
+    let outputFile = outputPath.appending(path: "Version.swift")
 
     return [
       .buildCommand(
-        displayName: "Build With Version Plugin",
-        executable: tool.path,
-        arguments: ["build", "--verbose", "--git-directory", gitDirectoryPath.string, "--target", outputPath.string],
+        displayName: "Build with Version Plugin",
+        executable: tool.url,
+        arguments: [
+          "build", "--verbose",
+          "--git-directory", gitDirectoryPath.absoluteString,
+          "--target", outputPath.absoluteString
+        ],
         environment: [:],
-        inputFiles: target.sourceFiles.map(\.path),
+        inputFiles: target.sourceFiles.map(\.url),
         outputFiles: [outputFile]
       )
     ]

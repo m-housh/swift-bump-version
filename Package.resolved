@@ -1,5 +1,5 @@
 {
-  "originHash" : "07a243cd8c2ed649f5fe5e76202ed091834801a0637c8b7785404e20b9e0cac1",
+  "originHash" : "867dabf4e0a92ed23018f0ef682d2d889f080ca5eaf99607665038dfb3a7532f",
   "pins" : [
     {
       "identity" : "combine-schedulers",
@@ -24,8 +24,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-argument-parser.git",
       "state" : {
-        "revision" : "8f4d2753f0e4778c76d5f05ad16c74f707390531",
-        "version" : "1.2.3"
+        "revision" : "41982a3656a71c768319979febd796c6fd111d5c",
+        "version" : "1.5.0"
       }
     },
     {
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/swift-concurrency-extras",
       "state" : {
-        "revision" : "ea631ce892687f5432a833312292b80db238186a",
-        "version" : "1.0.0"
+        "revision" : "82a4ae7170d98d8538ec77238b7eb8e7199ef2e8",
+        "version" : "1.3.1"
       }
     },
     {
@@ -60,14 +60,14 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-docc-plugin.git",
       "state" : {
-        "revision" : "26ac5758409154cc448d7ab82389c520fa8a8247",
-        "version" : "1.3.0"
+        "revision" : "85e4bb4e1cd62cec64a4b8e769dcefdf0c5b9d64",
+        "version" : "1.4.3"
       }
     },
     {
       "identity" : "swift-docc-symbolkit",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/apple/swift-docc-symbolkit",
+      "location" : "https://github.com/swiftlang/swift-docc-symbolkit",
       "state" : {
         "revision" : "b45d1f2ed151d057b54504d653e0da5552844e34",
         "version" : "1.0.0"
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log.git",
       "state" : {
-        "revision" : "532d8b529501fb73a2455b179e0bbb6d49b652ed",
-        "version" : "1.5.3"
+        "revision" : "96a2f8a0fa41e9e09af4585e2724c4e825410b91",
+        "version" : "1.6.2"
       }
     },
     {

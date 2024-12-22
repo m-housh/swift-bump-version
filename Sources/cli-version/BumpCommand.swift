@@ -1,5 +1,5 @@
 import ArgumentParser
-import CliVersion
+import CliClient
 import Dependencies
 
 extension CliVersionCommand {

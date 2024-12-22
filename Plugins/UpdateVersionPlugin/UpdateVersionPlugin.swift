@@ -1,5 +1,5 @@
-import PackagePlugin
 import Foundation
+import PackagePlugin
 
 @main
 struct UpdateVersionPlugin: CommandPlugin {
@@ -15,7 +15,7 @@ struct UpdateVersionPlugin: CommandPlugin {
       else { continue }
 
       let process = Process()
-      process.executableURL = URL(fileURLWithPath: gitVersion.path.string)
+      process.executableURL = gitVersion.url
       process.arguments = arguments
       try process.run()
       process.waitUntilExit()

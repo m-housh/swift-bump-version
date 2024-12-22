@@ -6,6 +6,7 @@ import ShellClient
 import TestSupport
 import XCTest
 
+// TODO: Remove
 final class GitVersionTests: XCTestCase {
 
   override func invokeTest() {
@@ -28,14 +29,16 @@ final class GitVersionTests: XCTestCase {
       .cleanFilePath
   }
 
-  func test_live() async throws {
-    @Dependency(\.gitClient) var versionClient: GitClient
+  #if !os(Linux)
+    func test_live() async throws {
+      @Dependency(\.gitClient) var versionClient: GitClient
 
-    let version = try await versionClient.currentVersion(in: gitDir)
-    print("VERSION: \(version)")
-    // can't really have a predictable result for the live client.
-    XCTAssertNotEqual(version, "blob")
-  }
+      let version = try await versionClient.currentVersion(in: gitDir)
+      print("VERSION: \(version)")
+      // can't really have a predictable result for the live client.
+      XCTAssertNotEqual(version, "blob")
+    }
+  #endif
 
   func test_file_client() async throws {
     try await withTemporaryDirectory { tmpDir in

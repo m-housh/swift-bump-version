@@ -15,7 +15,7 @@ struct GenerateVersionPlugin: CommandPlugin {
       else { continue }
 
       let process = Process()
-      process.executableURL = URL(fileURLWithPath: gitVersion.path.string)
+      process.executableURL = gitVersion.url
       process.arguments = arguments
       try process.run()
       process.waitUntilExit()

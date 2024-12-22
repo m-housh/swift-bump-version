@@ -1,4 +1,4 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.0
 
 import PackageDescription
 
@@ -8,7 +8,7 @@ let package = Package(
     .macOS(.v13)
   ],
   products: [
-    .library(name: "CliVersion", targets: ["CliVersion"]),
+    .library(name: "CliClient", targets: ["CliClient"]),
     .plugin(name: "BuildWithVersionPlugin", targets: ["BuildWithVersionPlugin"]),
     .plugin(name: "GenerateVersionPlugin", targets: ["GenerateVersionPlugin"]),
     .plugin(name: "UpdateVersionPlugin", targets: ["UpdateVersionPlugin"])
@@ -17,15 +17,28 @@ let package = Package(
     .package(url: "https://github.com/pointfreeco/swift-dependencies.git", from: "1.6.2"),
     .package(url: "https://github.com/m-housh/swift-shell-client.git", from: "0.2.0"),
     .package(url: "https://github.com/apple/swift-docc-plugin.git", from: "1.0.0"),
-    .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.2.2")
+    .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.0.0"),
+    .package(url: "https://github.com/apple/swift-log.git", from: "1.6.2")
   ],
   targets: [
     .executableTarget(
       name: "cli-version",
       dependencies: [
-        "CliVersion",
+        "CliClient",
         .product(name: "ArgumentParser", package: "swift-argument-parser")
       ]
+    ),
+    .target(
+      name: "CliClient",
+      dependencies: [
+        "FileClient",
+        "GitClient",
+        .product(name: "Logging", package: "swift-log")
+      ]
+    ),
+    .testTarget(
+      name: "CliVersionTests",
+      dependencies: ["CliClient", "TestSupport"]
     ),
     .target(
       name: "FileClient",
@@ -43,18 +56,7 @@ let package = Package(
         .product(name: "ShellClient", package: "swift-shell-client")
       ]
     ),
-    .target(
-      name: "CliVersion",
-      dependencies: [
-        "FileClient",
-        "GitClient"
-      ]
-    ),
     .target(name: "TestSupport"),
-    .testTarget(
-      name: "CliVersionTests",
-      dependencies: ["CliVersion", "TestSupport"]
-    ),
     .plugin(
       name: "BuildWithVersionPlugin",
       capability: .buildTool(),
