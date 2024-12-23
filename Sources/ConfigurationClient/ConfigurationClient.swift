@@ -4,18 +4,28 @@ import FileClient
 import Foundation
 
 public extension DependencyValues {
+
+  /// Perform operations with configuration files.
   var configurationClient: ConfigurationClient {
     get { self[ConfigurationClient.self] }
     set { self[ConfigurationClient.self] = newValue }
   }
 }
 
+/// Handles interactions with configuration files.
 @DependencyClient
 public struct ConfigurationClient: Sendable {
+
+  /// Find a configuration file in the given directory or in current working directory.
   public var find: @Sendable (URL?) async throws -> ConfigruationFile?
+
+  /// Load a configuration file.
   public var load: @Sendable (ConfigruationFile) async throws -> Configuration
+
+  /// Write a configuration file.
   public var write: @Sendable (Configuration, ConfigruationFile) async throws -> Void
 
+  /// Find a configuration file and load it if found.
   public func findAndLoad(_ url: URL? = nil) async throws -> Configuration {
     guard let url = try await find(url) else {
       throw ConfigurationClientError.configurationNotFound
@@ -30,7 +40,7 @@ extension ConfigurationClient: DependencyKey {
   public static var liveValue: ConfigurationClient {
     .init(
       find: { try await findConfiguration($0) },
-      load: { try await $0.load() ?? .init() },
+      load: { try await $0.load() ?? .mock },
       write: { try await $1.write($0) }
     )
   }

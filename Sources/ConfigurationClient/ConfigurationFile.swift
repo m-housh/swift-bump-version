@@ -2,10 +2,27 @@ import Dependencies
 import FileClient
 import Foundation
 
+/// Represents a configuration file type and location.
 public enum ConfigruationFile: Equatable, Sendable {
+
+  /// A json configuration file.
   case json(URL)
+
+  /// A toml configuration file.
   case toml(URL)
 
+  /// Default configuration file, which is a toml file
+  /// with the name of '.bump-version.toml'
+  public static var `default`: Self {
+    .toml(URL(
+      filePath: "\(ConfigurationClient.Constants.defaultFileNameWithoutExtension).toml"
+    ))
+  }
+
+  /// Create a new file location from the given url.
+  ///
+  /// - Parameters:
+  ///   - url: The url for the file.
   public init?(url: URL) {
     if url.pathExtension == "toml" {
       self = .toml(url)
@@ -16,6 +33,7 @@ public enum ConfigruationFile: Equatable, Sendable {
     }
   }
 
+  /// The url of the file.
   var url: URL {
     switch self {
     case let .json(url): return url

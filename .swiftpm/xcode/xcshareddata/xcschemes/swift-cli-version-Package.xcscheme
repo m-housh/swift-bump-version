@@ -90,6 +90,20 @@
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "CliClient"
+               BuildableName = "CliClient"
+               BlueprintName = "CliClient"
+               ReferencedContainer = "container:">
+            </BuildableReference>
+         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -106,6 +120,16 @@
                BlueprintIdentifier = "CliVersionTests"
                BuildableName = "CliVersionTests"
                BlueprintName = "CliVersionTests"
+               ReferencedContainer = "container:">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "ConfigurationClientTests"
+               BuildableName = "ConfigurationClientTests"
+               BlueprintName = "ConfigurationClientTests"
                ReferencedContainer = "container:">
             </BuildableReference>
          </TestableReference>

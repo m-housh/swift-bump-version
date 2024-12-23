@@ -50,6 +50,10 @@ let package = Package(
         .product(name: "TOMLKit", package: "TOMLKit")
       ]
     ),
+    .testTarget(
+      name: "ConfigurationClientTests",
+      dependencies: ["ConfigurationClient", "TestSupport"]
+    ),
     .target(
       name: "FileClient",
       dependencies: [
