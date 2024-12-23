@@ -1,5 +1,6 @@
 import ArgumentParser
 @_spi(Internal) import CliClient
+import ConfigurationClient
 import Dependencies
 import Foundation
 import Rainbow
@@ -173,6 +174,16 @@ private extension TargetOptions {
   }
 
   struct InvalidTargetOption: Error {}
+
+  func configTarget() throws -> Configuration.Target? {
+    guard let path else {
+      guard let module else {
+        return nil
+      }
+      return .init(module: .init(module, fileName: fileName))
+    }
+    return .init(path: path)
+  }
 }
 
 extension PreReleaseOptions {
@@ -197,6 +208,25 @@ extension PreReleaseOptions {
     }
   }
 
+  func configPreReleaseStrategy() throws -> Configuration.PreReleaseStrategy? {
+    guard let custom else {
+      if useBranchAsPreRelease {
+        return .branch()
+      } else if useTagAsPreRelease {
+        return .gitTag
+      } else {
+        return nil
+      }
+    }
+
+    if useBranchAsPreRelease {
+      return .customBranchPrefix(custom)
+    } else if useTagAsPreRelease {
+      return .customGitTagPrefix(custom)
+    } else {
+      return .custom(custom)
+    }
+  }
 }
 
 extension SemVarOptions {
@@ -207,4 +237,13 @@ extension SemVarOptions {
       requireExistingSemVar: requireExistingSemvar
     )
   }
+
+  func configSemVarOptions() throws -> Configuration.SemVar {
+    try .init(
+      preRelease: preRelease.configPreReleaseStrategy(),
+      requireExistingFile: requireExistingFile,
+      requireExistingSemVar: requireExistingSemvar
+    )
+  }
+
 }

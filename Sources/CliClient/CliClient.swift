@@ -1,9 +1,12 @@
+import ConfigurationClient
 import Dependencies
 import DependenciesMacros
 import FileClient
 import Foundation
 import GitClient
 import ShellClient
+
+// TODO: Integrate ConfigurationClient
 
 public extension DependencyValues {
 
@@ -44,6 +47,8 @@ public struct CliClient: Sendable {
   public enum VersionStrategy: Equatable, Sendable {
     case branchAndCommit
     case semVar(SemVarOptions)
+
+    // public typealias SemVarOptions = Configuration.SemVar
 
     public struct SemVarOptions: Equatable, Sendable {
       let preReleaseStrategy: PreReleaseStrategy?

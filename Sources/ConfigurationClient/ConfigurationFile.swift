@@ -3,7 +3,7 @@ import FileClient
 import Foundation
 
 /// Represents a configuration file type and location.
-public enum ConfigruationFile: Equatable, Sendable {
+public enum ConfigurationFile: Equatable, Sendable {
 
   /// A json configuration file.
   case json(URL)
@@ -34,7 +34,7 @@ public enum ConfigruationFile: Equatable, Sendable {
   }
 
   /// The url of the file.
-  var url: URL {
+  public var url: URL {
     switch self {
     case let .json(url): return url
     case let .toml(url): return url
@@ -42,7 +42,7 @@ public enum ConfigruationFile: Equatable, Sendable {
   }
 }
 
-extension ConfigruationFile {
+extension ConfigurationFile {
 
   func load() async throws -> Configuration? {
     @Dependency(\.coders) var coders

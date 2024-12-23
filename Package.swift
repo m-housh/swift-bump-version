@@ -19,19 +19,22 @@ let package = Package(
     .package(url: "https://github.com/apple/swift-docc-plugin.git", from: "1.0.0"),
     .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.0.0"),
     .package(url: "https://github.com/apple/swift-log.git", from: "1.6.2"),
-    .package(url: "https://github.com/LebJe/TOMLKit.git", from: "0.5.0")
+    .package(url: "https://github.com/LebJe/TOMLKit.git", from: "0.5.0"),
+    .package(url: "https://github.com/pointfreeco/swift-custom-dump.git", from: "1.3.3")
   ],
   targets: [
     .executableTarget(
       name: "cli-version",
       dependencies: [
         "CliClient",
-        .product(name: "ArgumentParser", package: "swift-argument-parser")
+        .product(name: "ArgumentParser", package: "swift-argument-parser"),
+        .product(name: "CustomDump", package: "swift-custom-dump")
       ]
     ),
     .target(
       name: "CliClient",
       dependencies: [
+        "ConfigurationClient",
         "FileClient",
         "GitClient",
         .product(name: "Logging", package: "swift-log")

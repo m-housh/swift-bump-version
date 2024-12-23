@@ -17,13 +17,13 @@ public extension DependencyValues {
 public struct ConfigurationClient: Sendable {
 
   /// Find a configuration file in the given directory or in current working directory.
-  public var find: @Sendable (URL?) async throws -> ConfigruationFile?
+  public var find: @Sendable (URL?) async throws -> ConfigurationFile?
 
   /// Load a configuration file.
-  public var load: @Sendable (ConfigruationFile) async throws -> Configuration
+  public var load: @Sendable (ConfigurationFile) async throws -> Configuration
 
   /// Write a configuration file.
-  public var write: @Sendable (Configuration, ConfigruationFile) async throws -> Void
+  public var write: @Sendable (Configuration, ConfigurationFile) async throws -> Void
 
   /// Find a configuration file and load it if found.
   public func findAndLoad(_ url: URL? = nil) async throws -> Configuration {
@@ -46,7 +46,7 @@ extension ConfigurationClient: DependencyKey {
   }
 }
 
-private func findConfiguration(_ url: URL?) async throws -> ConfigruationFile? {
+private func findConfiguration(_ url: URL?) async throws -> ConfigurationFile? {
   @Dependency(\.fileClient) var fileClient
 
   var url: URL! = url
@@ -55,8 +55,10 @@ private func findConfiguration(_ url: URL?) async throws -> ConfigruationFile? {
   }
 
   // Check if url is a valid configuration url.
-  var configurationFile = ConfigruationFile(url: url)
-  if let configurationFile { return configurationFile }
+  var configurationFile = ConfigurationFile(url: url)
+  if let configurationFile, fileClient.fileExists(configurationFile.url) {
+    return configurationFile
+  }
 
   guard try await fileClient.isDirectory(url.cleanFilePath) else {
     throw ConfigurationClientError.invalidConfigurationDirectory(path: url.cleanFilePath)
@@ -64,13 +66,17 @@ private func findConfiguration(_ url: URL?) async throws -> ConfigruationFile? {
 
   // Check for toml file.
   let tomlUrl = url.appending(path: "\(ConfigurationClient.Constants.defaultFileNameWithoutExtension).toml")
-  configurationFile = ConfigruationFile(url: tomlUrl)
-  if let configurationFile { return configurationFile }
+  configurationFile = ConfigurationFile(url: tomlUrl)
+  if let configurationFile, fileClient.fileExists(configurationFile.url) {
+    return configurationFile
+  }
 
   // Check for json file.
   let jsonUrl = url.appending(path: "\(ConfigurationClient.Constants.defaultFileNameWithoutExtension).json")
-  configurationFile = ConfigruationFile(url: jsonUrl)
-  if let configurationFile { return configurationFile }
+  configurationFile = ConfigurationFile(url: jsonUrl)
+  if let configurationFile, fileClient.fileExists(configurationFile.url) {
+    return configurationFile
+  }
 
   // Couldn't find valid configuration file.
   return nil

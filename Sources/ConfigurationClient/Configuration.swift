@@ -47,7 +47,7 @@ public extension Configuration {
   struct Branch: Codable, Equatable, Sendable {
 
     /// Include the commit sha in the output for this strategy.
-    let includeCommitSha: Bool
+    public let includeCommitSha: Bool
 
     /// Create a new branch strategy.
     ///
@@ -217,10 +217,10 @@ public extension Configuration {
   struct VersionStrategy: Codable, Equatable, Sendable {
 
     /// Set if we're using the branch and commit sha to derive the version.
-    let branch: Branch?
+    public let branch: Branch?
 
     /// Set if we're using semvar to derive the version.
-    let semvar: SemVar?
+    public let semvar: SemVar?
 
     /// Create a new version strategy that uses branch and commit sha to derive the version.
     ///

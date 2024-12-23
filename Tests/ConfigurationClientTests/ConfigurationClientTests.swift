@@ -2,6 +2,7 @@ import ConfigurationClient
 import Dependencies
 import Foundation
 import Testing
+import TestSupport
 
 @Suite("ConfigurationClientTests")
 struct ConfigurationClientTests {
@@ -30,7 +31,7 @@ struct ConfigurationClientTests {
   @Test(arguments: ["foo", ".foo"])
   func configurationFile(fileName: String) {
     for ext in ["toml", "json", "bar"] {
-      let file = ConfigruationFile(url: URL(filePath: "\(fileName).\(ext)"))
+      let file = ConfigurationFile(url: URL(filePath: "\(fileName).\(ext)"))
       switch ext {
       case "toml":
         #expect(file == .toml(URL(filePath: "\(fileName).toml")))
@@ -38,6 +39,61 @@ struct ConfigurationClientTests {
         #expect(file == .json(URL(filePath: "\(fileName).json")))
       default:
         #expect(file == nil)
+      }
+    }
+  }
+
+  @Test
+  func writeAndLoad() async throws {
+    try await withTemporaryDirectory { url in
+      try await run {
+        @Dependency(\.configurationClient) var configurationClient
+
+        for ext in ["toml", "json"] {
+          let fileUrl = url.appending(path: "test.\(ext)")
+          let configuration = Configuration.mock
+          let configurationFile = ConfigurationFile(url: fileUrl)!
+
+          try await configurationClient.write(configuration, configurationFile)
+          let loaded = try await configurationClient.load(configurationFile)
+          #expect(loaded == configuration)
+
+          let findAndLoaded = try await configurationClient.findAndLoad(configurationFile.url)
+          #expect(findAndLoaded == configuration)
+
+          try FileManager.default.removeItem(at: fileUrl)
+        }
+      }
+    }
+  }
+
+  @Test
+  func findAndLoad() async throws {
+    try await withTemporaryDirectory { url in
+      try await run {
+        @Dependency(\.configurationClient) var configurationClient
+
+        let shouldBeNil = try await configurationClient.find(url)
+        #expect(shouldBeNil == nil)
+
+        do {
+          _ = try await configurationClient.findAndLoad(url)
+          #expect(Bool(false))
+        } catch {
+          #expect(Bool(true))
+        }
+
+        for ext in ["toml", "json"] {
+          let fileUrl = url.appending(path: ".bump-version.\(ext)")
+          let configuration = Configuration.mock
+          let configurationFile = ConfigurationFile(url: fileUrl)!
+
+          try await configurationClient.write(configuration, configurationFile)
+          let loaded = try await configurationClient.findAndLoad(url)
+          #expect(loaded == configuration)
+
+          try FileManager.default.removeItem(at: fileUrl)
+        }
       }
     }
   }

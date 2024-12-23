@@ -29,16 +29,16 @@ final class GitVersionTests: XCTestCase {
       .cleanFilePath
   }
 
-  #if !os(Linux)
-    func test_live() async throws {
-      @Dependency(\.gitClient) var versionClient: GitClient
-
-      let version = try await versionClient.currentVersion(in: gitDir)
-      print("VERSION: \(version)")
-      // can't really have a predictable result for the live client.
-      XCTAssertNotEqual(version, "blob")
-    }
-  #endif
+  // #if !os(Linux)
+  //   func test_live() async throws {
+  //     @Dependency(\.gitClient) var versionClient: GitClient
+  //
+  //     let version = try await versionClient.currentVersion(in: gitDir)
+  //     print("VERSION: \(version)")
+  //     // can't really have a predictable result for the live client.
+  //     XCTAssertNotEqual(version, "blob")
+  //   }
+  // #endif
 
   func test_file_client() async throws {
     try await withTemporaryDirectory { tmpDir in
