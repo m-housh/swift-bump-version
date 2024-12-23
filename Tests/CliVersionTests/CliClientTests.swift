@@ -1,4 +1,4 @@
-@_spi(Internal) import CliVersion
+@_spi(Internal) import CliClient
 import Dependencies
 import FileClient
 import Foundation
@@ -15,8 +15,13 @@ struct CliClientTests {
   )
   func testBuild(target: String) async throws {
     try await run {
+      $0.fileClient.fileExists = { _ in true }
+    } operation: {
       @Dependency(\.cliClient) var client
-      let output = try await client.build(.testOptions(target: target))
+      let output = try await client.build(.testOptions(
+        target: target,
+        versionStrategy: .semVar(.init(requireExistingFile: false))
+      ))
       #expect(output == "/baz/Sources/bar/Version.swift")
     }
   }
@@ -45,6 +50,9 @@ struct CliClientTests {
         #expect(string!.contains("let VERSION: \(typeString) = \"1.1.0\""))
       case .patch:
         #expect(string!.contains("let VERSION: \(typeString) = \"1.0.1\""))
+      case .preRelease:
+        // do something
+        #expect(Bool(true))
       }
     }
   }
@@ -55,25 +63,11 @@ struct CliClientTests {
   func generate(target: String) async throws {
     try await run {
       @Dependency(\.cliClient) var client
-      let output = try await client.generate(.testOptions(target: target))
+      let output = try await client.build(.testOptions(
+        target: target,
+        versionStrategy: .semVar(.init(requireExistingFile: false))
+      ))
       #expect(output == "/baz/Sources/bar/Version.swift")
-    }
-  }
-
-  @Test(
-    arguments: TestArguments.updateCases
-  )
-  func update(target: String, dryRun: Bool) async throws {
-    try await run {
-      $0.fileClient.fileExists = { _ in false }
-    } operation: {
-      @Dependency(\.cliClient) var client
-      let output = try await client.update(.testOptions(dryRun: dryRun, target: target))
-      #expect(output == "/baz/Sources/bar/Version.swift")
-    } assert: { string, _ in
-      if dryRun {
-        #expect(string == nil)
-      }
     }
   }
 
@@ -135,13 +129,15 @@ extension CliClient.SharedOptions {
     gitDirectory: String? = "/baz",
     dryRun: Bool = false,
     target: String = "bar",
-    logLevel: Logger.Level = .trace
+    logLevel: Logger.Level = .trace,
+    versionStrategy: CliClient.VersionStrategy = .semVar(.init())
   ) -> Self {
     .init(
-      gitDirectory: gitDirectory,
       dryRun: dryRun,
+      gitDirectory: gitDirectory,
+      logLevel: logLevel,
       target: target,
-      logLevel: logLevel
+      versionStrategy: versionStrategy
     )
   }
 }

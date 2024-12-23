@@ -1,3 +1,5 @@
+import Dependencies
+import FileClient
 import Foundation
 import GitClient
 
@@ -74,7 +76,7 @@ public struct SemVar: CustomStringConvertible, Equatable, Sendable {
   }
 
   // Bumps the sem-var by the given option (major, minor, patch)
-  public func bump(_ option: CliClient.BumpOption) -> Self {
+  public func bump(_ option: CliClient.BumpOption, preRelease: String?) -> Self {
     switch option {
     case .major:
       return .init(
@@ -97,7 +99,19 @@ public struct SemVar: CustomStringConvertible, Equatable, Sendable {
         patch: patch + 1,
         preRelease: preRelease
       )
+    case .preRelease:
+      guard let preRelease else { return self }
+      return applyingPreRelease(preRelease)
     }
+  }
+
+  public func applyingPreRelease(_ preRelease: String) -> Self {
+    .init(
+      major: major,
+      minor: minor,
+      patch: patch,
+      preRelease: preRelease
+    )
   }
 }
 

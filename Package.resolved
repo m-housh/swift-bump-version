@@ -1,5 +1,5 @@
 {
-  "originHash" : "867dabf4e0a92ed23018f0ef682d2d889f080ca5eaf99607665038dfb3a7532f",
+  "originHash" : "b7e59cc29214df682ee1aa756371133e94660f8aabd03c193d455ba057ed5d17",
   "pins" : [
     {
       "identity" : "combine-schedulers",
@@ -107,6 +107,15 @@
       "state" : {
         "revision" : "0687f71944021d616d34d922343dcef086855920",
         "version" : "600.0.1"
+      }
+    },
+    {
+      "identity" : "tomlkit",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/LebJe/TOMLKit.git",
+      "state" : {
+        "revision" : "ec6198d37d495efc6acd4dffbd262cdca7ff9b3f",
+        "version" : "0.6.0"
       }
     },
     {

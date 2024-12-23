@@ -18,7 +18,8 @@ let package = Package(
     .package(url: "https://github.com/m-housh/swift-shell-client.git", from: "0.2.0"),
     .package(url: "https://github.com/apple/swift-docc-plugin.git", from: "1.0.0"),
     .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.0.0"),
-    .package(url: "https://github.com/apple/swift-log.git", from: "1.6.2")
+    .package(url: "https://github.com/apple/swift-log.git", from: "1.6.2"),
+    .package(url: "https://github.com/LebJe/TOMLKit.git", from: "0.5.0")
   ],
   targets: [
     .executableTarget(
@@ -39,6 +40,15 @@ let package = Package(
     .testTarget(
       name: "CliVersionTests",
       dependencies: ["CliClient", "TestSupport"]
+    ),
+    .target(
+      name: "ConfigurationClient",
+      dependencies: [
+        "FileClient",
+        .product(name: "Dependencies", package: "swift-dependencies"),
+        .product(name: "DependenciesMacros", package: "swift-dependencies"),
+        .product(name: "TOMLKit", package: "TOMLKit")
+      ]
     ),
     .target(
       name: "FileClient",

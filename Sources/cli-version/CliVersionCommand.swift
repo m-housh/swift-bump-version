@@ -9,8 +9,8 @@ struct CliVersionCommand: AsyncParsableCommand {
     subcommands: [
       Build.self,
       Bump.self,
-      Generate.self,
-      Update.self
-    ]
+      Generate.self
+    ],
+    defaultSubcommand: Bump.self
   )
 }

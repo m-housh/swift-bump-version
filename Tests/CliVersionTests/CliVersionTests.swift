@@ -1,4 +1,4 @@
-@_spi(Internal) import CliVersion
+@_spi(Internal) import CliClient
 import Dependencies
 import FileClient
 import GitClient
