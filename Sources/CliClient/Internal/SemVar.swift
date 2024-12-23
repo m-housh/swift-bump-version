@@ -37,16 +37,30 @@ public struct SemVar: CustomStringConvertible, Equatable, Sendable {
   }
 
   public init?(string: String) {
+    @Dependency(\.logger) var logger
+
+    logger.trace("Parsing semvar from: \(string)")
+
     let parts = string.split(separator: ".")
+    logger.trace("parts: \(parts)")
     guard parts.count >= 3 else {
       return nil
     }
-    let major = Int(String(parts[0].replacingOccurrences(of: "\"", with: "")))
-    let minor = Int(String(parts[1]))
 
-    let patchParts = parts[2].split(separator: "-")
+    let major = Int(String(parts[0].replacingOccurrences(of: "\"", with: "")))
+    logger.trace("major: \(String(describing: major))")
+
+    let minor = Int(String(parts[1]))
+    logger.trace("minor: \(String(describing: minor))")
+
+    let patchParts = parts[2].replacingOccurrences(of: "\"", with: "").split(separator: "-")
+    logger.trace("patchParts: \(String(describing: patchParts))")
+
     let patch = Int(patchParts.first ?? "0")
+    logger.trace("patch: \(String(describing: patch))")
+
     let preRelease = String(patchParts.dropFirst().joined(separator: "-"))
+    logger.trace("preRelease: \(String(describing: preRelease))")
 
     self.init(
       major: major ?? 0,

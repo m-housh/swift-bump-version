@@ -33,66 +33,29 @@ public struct CliClient: Sendable {
     case major, minor, patch, preRelease
   }
 
-  public enum PreReleaseStrategy: Equatable, Sendable {
-    /// Use output of tag, with branch and commit sha.
-    case branchAndCommit
-
-    /// Provide a custom pre-release tag.
-    indirect case custom(String, PreReleaseStrategy? = nil)
-
-    /// Use the output of `git describe --tags`
-    case tag
-  }
-
-  public enum VersionStrategy: Equatable, Sendable {
-    case branchAndCommit
-    case semVar(SemVarOptions)
-
-    // public typealias SemVarOptions = Configuration.SemVar
-
-    public struct SemVarOptions: Equatable, Sendable {
-      let preReleaseStrategy: PreReleaseStrategy?
-      let requireExistingFile: Bool
-      let requireExistingSemVar: Bool
-
-      public init(
-        preReleaseStrategy: PreReleaseStrategy? = nil,
-        requireExistingFile: Bool = true,
-        requireExistingSemVar: Bool = true
-      ) {
-        self.preReleaseStrategy = preReleaseStrategy
-        self.requireExistingFile = requireExistingFile
-        self.requireExistingSemVar = requireExistingSemVar
-      }
-    }
-  }
-
   public struct SharedOptions: Equatable, Sendable {
 
     let dryRun: Bool
     let gitDirectory: String?
     let logLevel: Logger.Level
-    let preReleaseStrategy: PreReleaseStrategy?
-    let target: String
-    let versionStrategy: VersionStrategy
+    let configuration: Configuration
 
     public init(
       dryRun: Bool = false,
       gitDirectory: String? = nil,
       logLevel: Logger.Level = .debug,
-      preReleaseStrategy: PreReleaseStrategy? = nil,
-      target: String,
-      versionStrategy: VersionStrategy = .semVar(.init())
+      configuration: Configuration
     ) {
       self.dryRun = dryRun
-      self.target = target
       self.gitDirectory = gitDirectory
       self.logLevel = logLevel
-      self.preReleaseStrategy = preReleaseStrategy
-      self.versionStrategy = versionStrategy
+      self.configuration = configuration
     }
 
-    var allowPreReleaseTag: Bool { preReleaseStrategy != nil }
+    var allowPreReleaseTag: Bool {
+      guard let semvar = configuration.strategy?.semvar else { return false }
+      return semvar.preRelease != nil
+    }
   }
 
 }

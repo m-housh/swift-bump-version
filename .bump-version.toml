@@ -2,14 +2,6 @@
 requireExistingFile = true
 requireExistingSemVar = true
 
-[strategy.semvar.preRelease]
-prefix = 'rc'
-style = 'custom'
-usesGitTag = false
-
-[strategy.semvar.preRelease.branch]
-includeCommitSha = true
-
 [target.module]
 fileName = 'Version.swift'
 name = 'cli-version'

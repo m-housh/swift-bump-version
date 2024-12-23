@@ -6,30 +6,6 @@ import GitClient
 @_spi(Internal)
 public extension CliClient.SharedOptions {
 
-  func parseTargetUrl() async throws -> URL {
-    @Dependency(\.fileClient) var fileClient
-
-    let target = target.hasPrefix(".") ? String(target.dropFirst()) : target
-    let targetHasSources = target.hasPrefix("Sources") || target.hasPrefix("/Sources")
-
-    var url = url(for: gitDirectory ?? (targetHasSources ? target : "Sources"))
-
-    if gitDirectory != nil {
-      if !targetHasSources {
-        url.appendPathComponent("Sources")
-      }
-      url.appendPathComponent(target)
-    }
-
-    let isDirectory = try await fileClient.isDirectory(url.cleanFilePath)
-
-    if isDirectory {
-      url.appendPathComponent(Constants.defaultFileName)
-    }
-
-    return url
-  }
-
   @discardableResult
   func run(
     _ operation: (CurrentVersionContainer) async throws -> Void
@@ -39,12 +15,12 @@ public extension CliClient.SharedOptions {
     } operation: {
       @Dependency(\.logger) var logger
 
-      let targetUrl = try await parseTargetUrl()
+      let targetUrl = try configuration.targetUrl(gitDirectory: gitDirectory)
       logger.debug("Target: \(targetUrl.cleanFilePath)")
 
       try await operation(
-        versionStrategy.currentVersion(
-          file: targetUrl,
+        configuration.currentVersion(
+          targetUrl: targetUrl,
           gitDirectory: gitDirectory
         )
       )
@@ -124,9 +100,11 @@ extension CliClient.SharedOptions {
 
       switch container.version {
       case .string: // When we did not parse a semVar, just write whatever we parsed for the current version.
+        logger.debug("Failed to parse semvar, but got current version string.")
         try await write(container)
 
       case let .semVar(semVar, usesOptionalType: usesOptionalType):
+        logger.debug("Semvar prior to bumping: \(semVar)")
         let bumped = semVar.bump(type, preRelease: nil) // preRelease is already set on semVar.
         let version = bumped.versionString(withPreReleaseTag: allowPreReleaseTag)
         logger.debug("Bumped version: \(version)")

@@ -7,6 +7,12 @@ import Rainbow
 
 struct GlobalOptions<Child: ParsableArguments>: ParsableArguments {
 
+  @Option(
+    name: .shortAndLong,
+    help: "Specify the path to a configuration file."
+  )
+  var configurationFile: String?
+
   @OptionGroup var targetOptions: TargetOptions
   @OptionGroup var child: Child
 
@@ -71,7 +77,7 @@ struct PreReleaseOptions: ParsableArguments {
   var useTagAsPreRelease: Bool = false
 
   @Option(
-    name: .shortAndLong,
+    name: .long,
     help: """
     Apply custom pre-release suffix, can also use branch or tag along with this
     option as a prefix, used if branch is not set. (example: \"rc\")
@@ -103,14 +109,18 @@ typealias GlobalSemVarOptions = GlobalOptions<SemVarOptions>
 typealias GlobalBranchOptions = GlobalOptions<Empty>
 
 extension GlobalSemVarOptions {
-  func shared() throws -> CliClient.SharedOptions {
-    try shared(.semVar(child.semVarOptions()))
+  func shared() async throws -> CliClient.SharedOptions {
+    try await withConfiguration(path: configurationFile) { configuration in
+      try shared(configuration.mergingStrategy(.init(semvar: child.configSemVarOptions())))
+    }
   }
 }
 
 extension GlobalBranchOptions {
-  func shared() throws -> CliClient.SharedOptions {
-    try shared(.branchAndCommit)
+  func shared() async throws -> CliClient.SharedOptions {
+    try await withConfiguration(path: configurationFile) { configuration in
+      try shared(configuration.mergingStrategy(.init(branch: .init())))
+    }
   }
 }
 
@@ -146,13 +156,12 @@ extension CliClient.SharedOptions {
 
 extension GlobalOptions {
 
-  func shared(_ versionStrategy: CliClient.VersionStrategy) throws -> CliClient.SharedOptions {
-    try .init(
+  func shared(_ configuration: Configuration) throws -> CliClient.SharedOptions {
+    .init(
       dryRun: dryRun,
       gitDirectory: gitDirectory,
       logLevel: .init(verbose: verbose),
-      target: targetOptions.target(),
-      versionStrategy: versionStrategy
+      configuration: configuration
     )
   }
 
@@ -188,26 +197,6 @@ private extension TargetOptions {
 
 extension PreReleaseOptions {
 
-  func preReleaseStrategy() throws -> CliClient.PreReleaseStrategy? {
-    guard let custom else {
-      if useBranchAsPreRelease {
-        return .branchAndCommit
-      } else if useTagAsPreRelease {
-        return .tag
-      } else {
-        return nil
-      }
-    }
-
-    if useBranchAsPreRelease {
-      return .custom(custom, .branchAndCommit)
-    } else if useTagAsPreRelease {
-      return .custom(custom, .tag)
-    } else {
-      return .custom(custom, nil)
-    }
-  }
-
   func configPreReleaseStrategy() throws -> Configuration.PreReleaseStrategy? {
     guard let custom else {
       if useBranchAsPreRelease {
@@ -230,13 +219,6 @@ extension PreReleaseOptions {
 }
 
 extension SemVarOptions {
-  func semVarOptions() throws -> CliClient.VersionStrategy.SemVarOptions {
-    try .init(
-      preReleaseStrategy: preRelease.preReleaseStrategy(),
-      requireExistingFile: requireExistingFile,
-      requireExistingSemVar: requireExistingSemvar
-    )
-  }
 
   func configSemVarOptions() throws -> Configuration.SemVar {
     try .init(

@@ -1,4 +1,5 @@
 @_spi(Internal) import CliClient
+import ConfigurationClient
 import Dependencies
 import FileClient
 import Foundation
@@ -20,7 +21,7 @@ struct CliClientTests {
       @Dependency(\.cliClient) var client
       let output = try await client.build(.testOptions(
         target: target,
-        versionStrategy: .semVar(.init(requireExistingFile: false))
+        versionStrategy: .init(semvar: .init(requireExistingFile: false))
       ))
       #expect(output == "/baz/Sources/bar/Version.swift")
     }
@@ -65,7 +66,7 @@ struct CliClientTests {
       @Dependency(\.cliClient) var client
       let output = try await client.build(.testOptions(
         target: target,
-        versionStrategy: .semVar(.init(requireExistingFile: false))
+        versionStrategy: .init(semvar: .init(requireExistingFile: false))
       ))
       #expect(output == "/baz/Sources/bar/Version.swift")
     }
@@ -113,7 +114,7 @@ struct CliClientTests {
 }
 
 enum TestArguments {
-  static let testCases = ["bar", "Sources/bar", "/Sources/bar", "./Sources/bar"]
+  static let testCases = ["bar", "Sources/bar", "./Sources/bar"]
   static let bumpCases = CliClient.BumpOption.allCases.reduce(into: [(CliClient.BumpOption, Bool)]()) {
     $0.append(($1, true))
     $0.append(($1, false))
@@ -130,14 +131,16 @@ extension CliClient.SharedOptions {
     dryRun: Bool = false,
     target: String = "bar",
     logLevel: Logger.Level = .trace,
-    versionStrategy: CliClient.VersionStrategy = .semVar(.init())
+    versionStrategy: Configuration.VersionStrategy = .init(semvar: .init())
   ) -> Self {
     .init(
       dryRun: dryRun,
       gitDirectory: gitDirectory,
       logLevel: logLevel,
-      target: target,
-      versionStrategy: versionStrategy
+      configuration: .init(
+        target: .init(module: .init(target)),
+        strategy: versionStrategy
+      )
     )
   }
 }

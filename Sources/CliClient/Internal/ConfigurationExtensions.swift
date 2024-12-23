@@ -3,8 +3,29 @@ import Dependencies
 import Foundation
 import GitClient
 
+extension Configuration {
+  func targetUrl(gitDirectory: String?) throws -> URL {
+    guard let target else {
+      throw ConfigurationParsingError.targetNotFound
+    }
+    return try target.url(gitDirectory: gitDirectory)
+  }
+
+  func currentVersion(targetUrl: URL, gitDirectory: String?) async throws -> CurrentVersionContainer {
+    guard let strategy else {
+      throw ConfigurationParsingError.versionNotFound
+    }
+    return try await strategy.currentVersion(
+      targetUrl: targetUrl,
+      gitDirectory: gitDirectory
+    )
+  }
+}
+
 extension Configuration.Target {
   func url(gitDirectory: String?) throws -> URL {
+    @Dependency(\.logger) var logger
+
     let filePath: String
 
     if let path {
@@ -15,13 +36,17 @@ extension Configuration.Target {
       }
 
       var path = module.name
-      if !path.hasPrefix("Sources") || !path.hasPrefix("./Sources") {
-        path = "Sources/\(path)"
-      }
+      logger.debug("module.name: \(path)")
 
       if path.hasPrefix("./") {
         path = String(path.dropFirst(2))
       }
+
+      if !path.hasPrefix("Sources") {
+        logger.debug("no prefix")
+        path = "Sources/\(path)"
+      }
+
       filePath = "\(path)/\(module.fileName)"
     }
 
@@ -70,46 +95,66 @@ extension Configuration.PreReleaseStrategy {
 public extension Configuration.SemVar {
 
   private func applyingPreRelease(_ semVar: SemVar, _ gitDirectory: String?) async throws -> SemVar {
-    guard let preReleaseStrategy = self.preRelease else { return semVar }
+    @Dependency(\.logger) var logger
+    logger.trace("Start apply pre-release to: \(semVar)")
+    guard let preReleaseStrategy = self.preRelease else {
+      logger.trace("No pre-release strategy, returning original semvar.")
+      return semVar
+    }
+
     let preRelease = try await preReleaseStrategy.preReleaseString(gitDirectory: gitDirectory)
+    logger.trace("Pre-release string: \(preRelease)")
+
     return semVar.applyingPreRelease(preRelease)
   }
 
   func currentVersion(file: URL, gitDirectory: String? = nil) async throws -> CurrentVersionContainer.Version {
     @Dependency(\.fileClient) var fileClient
     @Dependency(\.gitClient) var gitClient
+    @Dependency(\.logger) var logger
 
     let fileOutput = try? await fileClient.semVar(file: file, gitDirectory: gitDirectory)
     var semVar = fileOutput?.semVar
+
+    logger.trace("file output semvar: \(String(describing: semVar))")
+
     let usesOptionalType = fileOutput?.usesOptionalType
 
-    if requireExistingFile {
-      guard let semVar else {
-        throw CliClientError.fileDoesNotExist(path: file.cleanFilePath)
-      }
+    // We parsed a semvar from the existing file, use it.
+    if semVar != nil {
       return try await .semVar(
-        applyingPreRelease(semVar, gitDirectory),
+        applyingPreRelease(semVar!, gitDirectory),
         usesOptionalType: usesOptionalType ?? false
       )
     }
 
-    // Didn't have existing semVar loaded from file, so check for git-tag.
+    if requireExistingFile {
+      logger.debug("Failed to parse existing file, and caller requires it.")
+      throw CliClientError.fileDoesNotExist(path: file.cleanFilePath)
+    }
 
+    logger.trace("Does not require existing file, checking git-tag.")
+
+    // Didn't have existing semVar loaded from file, so check for git-tag.
     semVar = try await gitClient.version(.init(
       gitDirectory: gitDirectory,
       style: .tag(exactMatch: false)
     )).semVar
 
-    if requireExistingSemVar {
-      guard let semVar else {
-        fatalError()
-      }
+    if semVar != nil {
       return try await .semVar(
-        applyingPreRelease(semVar, gitDirectory),
+        applyingPreRelease(semVar!, gitDirectory),
         usesOptionalType: usesOptionalType ?? false
       )
     }
 
+    if requireExistingSemVar {
+      logger.trace("Caller requires existing semvar and it was not found in file or git-tag.")
+      throw CliClientError.semVarNotFound
+    }
+
+    // Semvar doesn't exist, so create a new one.
+    logger.trace("Generating new semvar.")
     return try await .semVar(
       applyingPreRelease(.init(), gitDirectory),
       usesOptionalType: usesOptionalType ?? false
@@ -143,6 +188,8 @@ extension Configuration.VersionStrategy {
 }
 
 enum ConfigurationParsingError: Error {
+  case targetNotFound
   case pathOrModuleNotSet
   case versionStrategyError(message: String)
+  case versionNotFound
 }

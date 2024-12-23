@@ -34,6 +34,7 @@ public extension FileClient {
     guard let versionString else {
       throw CliClientError.failedToParseVersionFile
     }
+    logger.debug("Parsed version string: \(versionString)")
     return (String(versionString), isOptional)
   }
 
@@ -41,8 +42,12 @@ public extension FileClient {
     file: URL,
     gitDirectory: String?
   ) async throws -> (semVar: SemVar?, usesOptionalType: Bool) {
+    @Dependency(\.logger) var logger
     let (string, usesOptionalType) = try await getVersionString(fileUrl: file, gitDirectory: gitDirectory)
-    return (SemVar(string: string), usesOptionalType)
+    let semvar = SemVar(string: string)
+    logger.debug("Semvar: \(String(describing: semvar))")
+
+    return (semvar, usesOptionalType)
   }
 
 }
