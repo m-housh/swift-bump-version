@@ -1,19 +1,7 @@
 {
   "strategy" : {
-    "semvar" : {
-      "preRelease" : {
-        "strategy" : {
-          "command" : {
-            "arguments" : [
-              "git",
-              "describe",
-              "--tags"
-            ]
-          }
-        }
-      },
-      "requireExistingFile" : true,
-      "requireExistingSemVar" : true
+    "branch" : {
+      "includeCommitSha": true
     }
   },
   "target" : {

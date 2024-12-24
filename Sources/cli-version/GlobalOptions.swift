@@ -111,7 +111,7 @@ typealias GlobalBranchOptions = GlobalOptions<Empty>
 extension GlobalSemVarOptions {
   func shared() async throws -> CliClient.SharedOptions {
     try await withConfiguration(path: configurationFile) { configuration in
-      try shared(configuration.mergingStrategy(.init(semvar: child.configSemVarOptions())))
+      try shared(configuration.mergingStrategy(.semvar(child.configSemVarOptions())))
     }
   }
 }
@@ -119,7 +119,7 @@ extension GlobalSemVarOptions {
 extension GlobalBranchOptions {
   func shared() async throws -> CliClient.SharedOptions {
     try await withConfiguration(path: configurationFile) { configuration in
-      try shared(configuration.mergingStrategy(.init(branch: .init())))
+      try shared(configuration.mergingStrategy(.branch()))
     }
   }
 }
@@ -197,24 +197,26 @@ private extension TargetOptions {
 
 extension PreReleaseOptions {
 
-  func configPreReleaseStrategy() throws -> Configuration.PreReleaseStrategy? {
-    guard let custom else {
-      if useBranchAsPreRelease {
-        return .branch()
-      } else if useTagAsPreRelease {
-        return .gitTag
-      } else {
-        return nil
-      }
-    }
-
-    if useBranchAsPreRelease {
-      return .customBranchPrefix(custom)
-    } else if useTagAsPreRelease {
-      return .customGitTagPrefix(custom)
-    } else {
-      return .custom(custom)
-    }
+  // FIX:
+  func configPreReleaseStrategy() throws -> Configuration.PreRelease? {
+    return nil
+    // guard let custom else {
+    //   if useBranchAsPreRelease {
+    //     return .branch()
+    //   } else if useTagAsPreRelease {
+    //     return .gitTag
+    //   } else {
+    //     return nil
+    //   }
+    // }
+    //
+    // if useBranchAsPreRelease {
+    //   return .customBranchPrefix(custom)
+    // } else if useTagAsPreRelease {
+    //   return .customGitTagPrefix(custom)
+    // } else {
+    //   return .custom(custom)
+    // }
   }
 }
 

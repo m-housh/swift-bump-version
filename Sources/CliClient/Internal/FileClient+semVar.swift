@@ -46,7 +46,6 @@ public extension FileClient {
     let (string, usesOptionalType) = try await getVersionString(fileUrl: file, gitDirectory: gitDirectory)
     let semvar = SemVar(string: string)
     logger.debug("Semvar: \(String(describing: semvar))")
-
     return (semvar, usesOptionalType)
   }
 

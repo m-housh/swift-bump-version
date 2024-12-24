@@ -1,8 +1,5 @@
 import CustomDump
 import Foundation
-import TOMLKit
-
-// TODO: Just use json for configuration ??
 
 /// Represents configuration that can be set via a file, generally in the root of the
 /// project directory.
@@ -18,7 +15,7 @@ public struct Configuration: Codable, Equatable, Sendable {
 
   public init(
     target: Target? = nil,
-    strategy: VersionStrategy? = .init(semvar: .init())
+    strategy: VersionStrategy? = .semvar(.init())
   ) {
     self.target = target
     self.strategy = strategy
@@ -27,39 +24,26 @@ public struct Configuration: Codable, Equatable, Sendable {
   public static var mock: Self {
     .init(
       target: .init(module: .init("cli-version")),
-      strategy: .init()
+      strategy: .semvar(.init())
     )
   }
 
   public static var customPreRelease: Self {
     .init(
       target: .init(module: .init("cli-version")),
-      strategy: .init(semvar: .init(
-        preRelease: .customBranchPrefix("rc")
+      strategy: .semvar(.init(
+        preRelease: .init(prefix: "rc", strategy: .branch())
       ))
     )
   }
-}
-
-public struct Configuration2: Codable, Equatable, Sendable {
-  public let target: Configuration.Target?
-  public let strategy: Configuration.VersionStrategy2?
-
-  public static let mock = Self(
-    target: .init(module: .init("cli-version")),
-    strategy: .semvar(value: .init(preRelease: .init(
-      strategy: .branch()
-    )))
-    // strategy: .branch()
-  )
 }
 
 public extension Configuration {
 
   /// Represents a branch version or pre-release strategy.
   ///
-  /// This derives the version from the branch name and short version
-  /// of the commit sha if configured.
+  /// This derives the version or pre-release suffix from the branch name and
+  /// optionally the short version of the commit sha.
   struct Branch: Codable, Equatable, Sendable {
 
     /// Include the commit sha in the output for this strategy.
@@ -74,14 +58,19 @@ public extension Configuration {
     }
   }
 
-  struct PreRelease2: Codable, Equatable, Sendable {
+  /// Represents version strategy for pre-release.
+  ///
+  /// This appends a suffix to the version that get's generated from the version strategy.
+  /// For example: `1.0.0-rc-1`
+  ///
+  struct PreRelease: Codable, Equatable, Sendable {
 
     public let prefix: String?
-    public let strategy: Strategy
+    public let strategy: Strategy?
 
     public init(
       prefix: String? = nil,
-      strategy: Strategy
+      strategy: Strategy? = nil
     ) {
       self.prefix = prefix
       self.strategy = strategy
@@ -91,99 +80,12 @@ public extension Configuration {
       case branch(includeCommitSha: Bool = true)
       case command(arguments: [String])
       case gitTag
-    }
-  }
 
-  /// Represents version strategy for pre-release.
-  ///
-  /// This appends a suffix to the version that get's generated from the version strategy.
-  /// For example: `1.0.0-rc-1`
-  ///
-  struct PreReleaseStrategy: Codable, Equatable, Sendable, CustomDumpReflectable {
-
-    /// Use branch and commit sha as pre-release suffix.
-    public let branch: Branch?
-
-    /// Use a custom prefix string.
-    public let prefix: String?
-
-    /// An identifier for the type of pre-release.
-    public let style: StyleId
-
-    /// Whether we use `git describe --tags` for part of the suffix, this is only used
-    /// if we have a custom style.
-    public let usesGitTag: Bool?
-
-    init(
-      style: StyleId,
-      branch: Branch? = nil,
-      prefix: String? = nil,
-      usesGitTag: Bool = false
-    ) {
-      self.branch = branch
-      self.prefix = prefix
-      self.style = style
-      self.usesGitTag = usesGitTag
-    }
-
-    public var customDumpMirror: Mirror {
-      guard let branch else {
-        return .init(
-          self,
-          children: [
-            "style": style,
-            "prefix": prefix as Any,
-            "usesGitTag": style == .gitTag ? true : (usesGitTag ?? false)
-          ],
-          displayStyle: .struct
-        )
-        // return .init(reflecting: self)
+      public var branch: Branch? {
+        guard case let .branch(includeCommitSha) = self
+        else { return nil }
+        return .init(includeCommitSha: includeCommitSha)
       }
-      return .init(
-        self,
-        children: [
-          "style": style,
-          "branch": branch,
-          "prefix": prefix as Any
-        ],
-        displayStyle: .struct
-      )
-    }
-
-    /// Represents a pre-release strategy that is derived from calling
-    /// `git describe --tags`.
-    public static let gitTag = Self(style: StyleId.gitTag)
-
-    /// Represents a pre-release strategy that is derived from the branch and commit sha.
-    public static func branch(_ branch: Branch = .init()) -> Self {
-      .init(style: .branch, branch: branch)
-    }
-
-    /// Represents a custom strategy that uses the given value, not deriving any other
-    /// data.
-    public static func custom(_ prefix: String) -> Self {
-      .init(style: .custom, prefix: prefix)
-    }
-
-    /// Represents a custom strategy that uses a prefix along with the branch and
-    /// commit sha.
-    public static func customBranchPrefix(
-      _ prefix: String,
-      branch: Branch = .init()
-    ) -> Self {
-      .init(style: .custom, branch: branch, prefix: prefix)
-    }
-
-    /// Represents a custom strategy that uses a prefix along with the output from
-    /// calling `git describe --tags`.
-    public static func customGitTagPrefix(_ prefix: String) -> Self {
-      .init(style: StyleId.custom, prefix: prefix, usesGitTag: true)
-    }
-
-    public enum StyleId: String, Codable, Sendable {
-      case branch
-      case custom
-      case gitTag
     }
   }
 
@@ -194,7 +96,7 @@ public extension Configuration {
   struct SemVar: Codable, Equatable, Sendable {
 
     /// Optional pre-releas suffix strategy.
-    public let preRelease: PreReleaseStrategy?
+    public let preRelease: PreRelease?
 
     /// Fail if an existing version file does not exist in the target.
     public let requireExistingFile: Bool
@@ -203,30 +105,7 @@ public extension Configuration {
     public let requireExistingSemVar: Bool
 
     public init(
-      preRelease: PreReleaseStrategy? = nil,
-      requireExistingFile: Bool = true,
-      requireExistingSemVar: Bool = true
-    ) {
-      self.preRelease = preRelease
-      self.requireExistingFile = requireExistingFile
-      self.requireExistingSemVar = requireExistingSemVar
-    }
-
-  }
-
-  struct SemVar2: Codable, Equatable, Sendable {
-
-    /// Optional pre-releas suffix strategy.
-    public let preRelease: PreRelease2?
-
-    /// Fail if an existing version file does not exist in the target.
-    public let requireExistingFile: Bool
-
-    /// Fail if an existing semvar is not parsed from the file or version generation strategy.
-    public let requireExistingSemVar: Bool
-
-    public init(
-      preRelease: PreRelease2? = nil,
+      preRelease: PreRelease? = nil,
       requireExistingFile: Bool = true,
       requireExistingSemVar: Bool = true
     ) {
@@ -313,75 +192,57 @@ public extension Configuration {
     }
   }
 
-  enum VersionStrategy2: Codable, Equatable, Sendable {
+  /// Strategy used to generate a version.
+  ///
+  /// Typically a `SemVar` strategy or `Branch`.
+  ///
+  ///
+  enum VersionStrategy: Codable, Equatable, Sendable, CustomDumpReflectable {
     case branch(includeCommitSha: Bool = true)
+
     case semvar(
-      preRelease: PreRelease2? = nil,
+      preRelease: PreRelease? = nil,
       requireExistingFile: Bool? = nil,
       requireExistingSemVar: Bool? = nil
     )
 
-    static func semvar(value: SemVar2) -> Self {
+    public var branch: Branch? {
+      guard case let .branch(includeCommitSha) = self
+      else { return nil }
+
+      return .init(includeCommitSha: includeCommitSha)
+    }
+
+    public var semvar: SemVar? {
+      guard case let .semvar(preRelease, requireExistingFile, requireExistingSemVar) = self
+      else { return nil }
+      return .init(
+        preRelease: preRelease,
+        requireExistingFile: requireExistingFile ?? false,
+        requireExistingSemVar: requireExistingSemVar ?? false
+      )
+    }
+
+    public static func branch(_ branch: Branch) -> Self {
+      .branch(includeCommitSha: branch.includeCommitSha)
+    }
+
+    public static func semvar(_ value: SemVar) -> Self {
       .semvar(
         preRelease: value.preRelease,
         requireExistingFile: value.requireExistingFile,
         requireExistingSemVar: value.requireExistingSemVar
       )
     }
-  }
-
-  /// Strategy used to generate a version.
-  ///
-  /// Typically a `SemVar` strategy or `Branch`.
-  ///
-  ///
-  struct VersionStrategy: Codable, Equatable, Sendable, CustomDumpReflectable {
-
-    /// Set if we're using the branch and commit sha to derive the version.
-    public let branch: Branch?
-
-    /// Set if we're using semvar to derive the version.
-    public let semvar: SemVar?
-
-    /// Create a new version strategy that uses branch and commit sha to derive the version.
-    ///
-    /// - Parameters:
-    ///   - branch: The branch strategy options.
-    public init(branch: Branch) {
-      self.branch = branch
-      self.semvar = nil
-    }
-
-    /// Create a new version strategy that uses semvar to derive the version.
-    ///
-    /// - Parameters:
-    ///   - semvar: The semvar strategy options.
-    public init(semvar: SemVar = .init()) {
-      self.branch = nil
-      self.semvar = semvar
-    }
 
     public var customDumpMirror: Mirror {
-      if let branch {
-        return .init(
-          self,
-          children: [
-            "branch": branch
-          ],
-          displayStyle: .struct
-        )
-      } else if let semvar {
-        return .init(
-          self,
-          children: [
-            "semvar": semvar
-          ],
-          displayStyle: .struct
-        )
-      } else {
-        return .init(reflecting: self)
+      switch self {
+      case .branch:
+        return .init(self, children: ["branch": branch!], displayStyle: .struct)
+      case .semvar:
+        return .init(self, children: ["semvar": semvar!], displayStyle: .struct)
       }
     }
-
   }
+
 }

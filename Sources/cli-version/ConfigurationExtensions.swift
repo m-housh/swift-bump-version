@@ -40,9 +40,9 @@ extension Configuration.VersionStrategy {
   func merging(_ other: Self?) -> Self {
     guard let branch else {
       guard let semvar else { return self }
-      return .init(semvar: semvar.merging(other?.semvar))
+      return .semvar(semvar.merging(other?.semvar))
     }
-    return .init(branch: branch.merging(other?.branch))
+    return .branch(branch.merging(other?.branch))
   }
 }
 

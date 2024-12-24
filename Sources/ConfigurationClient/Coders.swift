@@ -1,7 +1,6 @@
 import Dependencies
 import DependenciesMacros
 import Foundation
-import TOMLKit
 
 public extension DependencyValues {
   var coders: Coders {
@@ -14,17 +13,13 @@ public extension DependencyValues {
 public struct Coders: Sendable {
   public var jsonDecoder: @Sendable () -> JSONDecoder = { .init() }
   public var jsonEncoder: @Sendable () -> JSONEncoder = { .init() }
-  public var tomlDecoder: @Sendable () -> TOMLDecoder = { .init() }
-  public var tomlEncoder: @Sendable () -> TOMLEncoder = { .init() }
 }
 
 extension Coders: DependencyKey {
   public static var testValue: Coders {
     .init(
       jsonDecoder: { .init() },
-      jsonEncoder: { defaultJsonEncoder },
-      tomlDecoder: { .init() },
-      tomlEncoder: { .init() }
+      jsonEncoder: { defaultJsonEncoder }
     )
   }
 

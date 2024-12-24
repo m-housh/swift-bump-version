@@ -68,14 +68,14 @@ extension GitClient {
   }
 }
 
-extension Configuration.PreReleaseStrategy {
+extension Configuration.PreRelease {
 
   func preReleaseString(gitDirectory: String?) async throws -> String {
     @Dependency(\.gitClient) var gitClient
 
     let preReleaseString: String
 
-    if let branch {
+    if let branch = strategy?.branch {
       preReleaseString = try await gitClient.version(branch: branch, gitDirectory: gitDirectory)
     } else {
       preReleaseString = try await gitClient.version(.init(

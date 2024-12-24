@@ -17,20 +17,20 @@ public extension DependencyValues {
 public struct ConfigurationClient: Sendable {
 
   /// Find a configuration file in the given directory or in current working directory.
-  public var find: @Sendable (URL?) async throws -> ConfigurationFile?
+  public var find: @Sendable (URL?) async throws -> URL?
 
   /// Load a configuration file.
-  public var load: @Sendable (ConfigurationFile) async throws -> Configuration
+  public var load: @Sendable (URL) async throws -> Configuration
 
   /// Write a configuration file.
-  public var write: @Sendable (Configuration, ConfigurationFile) async throws -> Void
+  public var write: @Sendable (Configuration, URL) async throws -> Void
 
   /// Find a configuration file and load it if found.
   public func findAndLoad(_ url: URL? = nil) async throws -> Configuration {
-    guard let url = try await find(url) else {
+    guard let url = try? await find(url) else {
       throw ConfigurationClientError.configurationNotFound
     }
-    return try await load(url)
+    return (try? await load(url)) ?? .mock
   }
 }
 
@@ -40,49 +40,48 @@ extension ConfigurationClient: DependencyKey {
   public static var liveValue: ConfigurationClient {
     .init(
       find: { try await findConfiguration($0) },
-      load: { try await $0.load() ?? .mock },
-      write: { try await $1.write($0) }
+      load: { try await loadConfiguration($0) },
+      write: { try await writeConfiguration($0, to: $1) }
     )
   }
 }
 
-private func findConfiguration(_ url: URL?) async throws -> ConfigurationFile? {
+private func findConfiguration(_ url: URL?) async throws -> URL? {
   @Dependency(\.fileClient) var fileClient
+
+  let defaultFileName = ConfigurationClient.Constants.defaultFileNameWithoutExtension
 
   var url: URL! = url
   if url == nil {
     url = try await URL(filePath: fileClient.currentDirectory())
   }
 
-  // Check if url is a valid configuration url.
-  var configurationFile = ConfigurationFile(url: url)
-  if let configurationFile, fileClient.fileExists(configurationFile.url) {
-    return configurationFile
+  if try await fileClient.isDirectory(url.cleanFilePath) {
+    url = url.appending(path: "\(defaultFileName).json")
   }
 
-  guard try await fileClient.isDirectory(url.cleanFilePath) else {
-    throw ConfigurationClientError.invalidConfigurationDirectory(path: url.cleanFilePath)
+  if fileClient.fileExists(url) {
+    return url
   }
-
-  // Check for toml file.
-  let tomlUrl = url.appending(path: "\(ConfigurationClient.Constants.defaultFileNameWithoutExtension).toml")
-  configurationFile = ConfigurationFile(url: tomlUrl)
-  if let configurationFile, fileClient.fileExists(configurationFile.url) {
-    return configurationFile
-  }
-
-  // Check for json file.
-  let jsonUrl = url.appending(path: "\(ConfigurationClient.Constants.defaultFileNameWithoutExtension).json")
-  configurationFile = ConfigurationFile(url: jsonUrl)
-  if let configurationFile, fileClient.fileExists(configurationFile.url) {
-    return configurationFile
-  }
-
-  // Couldn't find valid configuration file.
   return nil
+}
+
+private func loadConfiguration(_ url: URL) async throws -> Configuration {
+  @Dependency(\.coders.jsonDecoder) var jsonDecoder
+  @Dependency(\.fileClient) var fileClient
+
+  let string = try await fileClient.read(url.cleanFilePath)
+  return try jsonDecoder().decode(Configuration.self, from: Data(string.utf8))
 }
 
 enum ConfigurationClientError: Error {
   case configurationNotFound
   case invalidConfigurationDirectory(path: String)
+}
+
+private func writeConfiguration(_ configuration: Configuration, to url: URL) async throws {
+  @Dependency(\.fileClient) var fileClient
+  @Dependency(\.coders.jsonEncoder) var jsonEncoder
+  let data = try jsonEncoder().encode(configuration)
+  try await fileClient.write(data, url)
 }

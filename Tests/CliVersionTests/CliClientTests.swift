@@ -21,7 +21,7 @@ struct CliClientTests {
       @Dependency(\.cliClient) var client
       let output = try await client.build(.testOptions(
         target: target,
-        versionStrategy: .init(semvar: .init(requireExistingFile: false))
+        versionStrategy: .semvar(requireExistingFile: false)
       ))
       #expect(output == "/baz/Sources/bar/Version.swift")
     }
@@ -66,7 +66,7 @@ struct CliClientTests {
       @Dependency(\.cliClient) var client
       let output = try await client.build(.testOptions(
         target: target,
-        versionStrategy: .init(semvar: .init(requireExistingFile: false))
+        versionStrategy: .semvar(requireExistingFile: false)
       ))
       #expect(output == "/baz/Sources/bar/Version.swift")
     }
@@ -131,7 +131,7 @@ extension CliClient.SharedOptions {
     dryRun: Bool = false,
     target: String = "bar",
     logLevel: Logger.Level = .trace,
-    versionStrategy: Configuration.VersionStrategy = .init(semvar: .init())
+    versionStrategy: Configuration.VersionStrategy = .semvar(.init())
   ) -> Self {
     .init(
       dryRun: dryRun,
