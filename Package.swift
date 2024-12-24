@@ -8,6 +8,7 @@ let package = Package(
     .macOS(.v13)
   ],
   products: [
+    .executable(name: "bump-version", targets: ["bump-version"]),
     .library(name: "CliClient", targets: ["CliClient"]),
     .library(name: "ConfigurationClient", targets: ["ConfigurationClient"]),
     .library(name: "FileClient", targets: ["FileClient"]),
