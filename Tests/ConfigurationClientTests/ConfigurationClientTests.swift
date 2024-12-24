@@ -29,7 +29,7 @@ struct ConfigurationClientTests {
 
         for ext in ["json"] {
           let fileUrl = url.appending(path: "test.\(ext)")
-          let configuration = Configuration.mock
+          let configuration = Configuration.mock()
 
           try await configurationClient.write(configuration, fileUrl)
           let loaded = try await configurationClient.load(fileUrl)
@@ -62,7 +62,7 @@ struct ConfigurationClientTests {
 
         for ext in ["json"] {
           let fileUrl = url.appending(path: ".bump-version.\(ext)")
-          let configuration = Configuration.mock
+          let configuration = Configuration.mock()
 
           try await configurationClient.write(configuration, fileUrl)
           let loaded = try await configurationClient.findAndLoad(fileUrl)
@@ -73,56 +73,6 @@ struct ConfigurationClientTests {
       }
     }
   }
-
-  // @Test
-  // func writeDefault() async throws {
-  //   try await run {
-  //     @Dependency(\.coders) var coders
-  //     @Dependency(\.configurationClient) var configurationClient
-  //
-  //     // let configuration = Configuration.customPreRelease
-  //     // try await configurationClient.write(configuration, .json(URL(filePath: ".bump-version.json")))
-  //
-  //     // let target = Configuration.Target2.path("foo")
-  //     // let target = Configuration.Target2.gitTag
-  //     // let target = Configuration.Target2.branch()
-  //     let target = Configuration2.mock
-  //
-  //     let encoded = try coders.jsonEncoder().encode(target)
-  //     let url = URL(filePath: ".bump-version.json")
-  //     try encoded.write(to: url)
-  //
-  //     let data = try Data(contentsOf: url)
-  //     let decoded = try coders.jsonDecoder().decode(Configuration2.self, from: data)
-  //     print(decoded)
-  //   }
-  // }
-
-  // @Test
-  // func tomlPlayground() throws {
-  //   let jsonEncoder = JSONEncoder()
-  //   let encoder = TOMLEncoder()
-  //   let decoder = TOMLDecoder()
-  //
-  //   enum TestType: Codable {
-  //     case one
-  //     case hello(Hello)
-  //
-  //     struct Hello: Codable {
-  //       let value: String
-  //     }
-  //   }
-  //
-  //   struct TestContainer: Codable {
-  //     let testType: TestType
-  //   }
-  //
-  //   let sut = TestContainer(testType: .hello(.init(value: "world")))
-  //   let encoded = try encoder.encode(sut)
-  //   print(encoded)
-  //   // let decoded = try decoder.decode(TestContainer.self, from: encoded)
-  //   // #expect(decoded.testType == sut.testType)
-  // }
 
   func run(
     setupDependencies: @escaping (inout DependencyValues) -> Void = { _ in },

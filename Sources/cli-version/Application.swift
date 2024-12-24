@@ -2,16 +2,16 @@ import ArgumentParser
 import Foundation
 
 @main
-struct CliVersionCommand: AsyncParsableCommand {
+struct Application: AsyncParsableCommand {
   static let configuration: CommandConfiguration = .init(
-    commandName: "cli-version",
+    commandName: "bump-version",
     version: VERSION ?? "0.0.0",
     subcommands: [
-      Build.self,
-      Bump.self,
-      Generate.self,
+      BuildCommand.self,
+      BumpCommand.self,
+      GenerateCommand.self,
       UtilsCommand.self
     ],
-    defaultSubcommand: Bump.self
+    defaultSubcommand: BumpCommand.self
   )
 }

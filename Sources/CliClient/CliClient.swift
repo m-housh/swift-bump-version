@@ -27,6 +27,9 @@ public struct CliClient: Sendable {
   /// Generate a version file with an optional version that can be set manually.
   public var generate: @Sendable (SharedOptions) async throws -> String
 
+  /// Parse the configuration options.
+  public var parsedConfiguration: @Sendable (SharedOptions) async throws -> Configuration
+
   public enum BumpOption: Sendable, CaseIterable {
     case major, minor, patch, preRelease
   }
@@ -94,7 +97,10 @@ extension CliClient: DependencyKey {
     .init(
       build: { try await $0.build(environment) },
       bump: { try await $1.bump($0) },
-      generate: { try await $0.generate() }
+      generate: { try await $0.generate() },
+      parsedConfiguration: { options in
+        try await options.withMergedConfiguration { $0 }
+      }
     )
   }
 

@@ -30,7 +30,7 @@ public struct ConfigurationClient: Sendable {
     guard let url = try? await find(url) else {
       throw ConfigurationClientError.configurationNotFound
     }
-    return (try? await load(url)) ?? .mock
+    return (try? await load(url)) ?? .default
   }
 }
 

@@ -18,7 +18,7 @@ let package = Package(
   ],
   dependencies: [
     .package(url: "https://github.com/pointfreeco/swift-dependencies.git", from: "1.6.2"),
-    .package(url: "https://github.com/m-housh/swift-shell-client.git", from: "0.2.0"),
+    .package(url: "https://github.com/m-housh/swift-shell-client.git", from: "0.2.2"),
     .package(url: "https://github.com/apple/swift-docc-plugin.git", from: "1.0.0"),
     .package(url: "https://github.com/apple/swift-argument-parser.git", from: "1.0.0"),
     .package(url: "https://github.com/apple/swift-log.git", from: "1.6.2"),
@@ -74,6 +74,10 @@ let package = Package(
         .product(name: "DependenciesMacros", package: "swift-dependencies"),
         .product(name: "ShellClient", package: "swift-shell-client")
       ]
+    ),
+    .testTarget(
+      name: "GitClientTests",
+      dependencies: ["GitClient"]
     ),
     .target(name: "TestSupport"),
     .plugin(

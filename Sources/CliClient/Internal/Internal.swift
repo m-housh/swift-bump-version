@@ -7,6 +7,25 @@ import GitClient
 @_spi(Internal)
 public extension CliClient.SharedOptions {
 
+  // Merges any configuration set via the passed in options.
+  @discardableResult
+  func withMergedConfiguration<T>(
+    operation: (Configuration) async throws -> T
+  ) async throws -> T {
+    try await withConfiguration(path: configurationFile) { configuration in
+      var configuration = configuration
+      configuration = configuration.mergingTarget(target)
+
+      if configuration.strategy?.branch != nil, let branch {
+        configuration = configuration.mergingStrategy(.branch(branch))
+      } else if let semvar {
+        configuration = configuration.mergingStrategy(.semvar(semvar))
+      }
+
+      return try await operation(configuration)
+    }
+  }
+
   @discardableResult
   func run(
     _ operation: (CurrentVersionContainer) async throws -> Void
@@ -15,18 +34,8 @@ public extension CliClient.SharedOptions {
       $0.logger.logLevel = logLevel
     } operation: {
       // Load the default configuration, if it exists.
-      try await withConfiguration(path: configurationFile) { configuration in
+      try await withMergedConfiguration { configuration in
         @Dependency(\.logger) var logger
-
-        // Merge any configuration set from caller into default configuration.
-        var configuration = configuration
-        configuration = configuration.mergingTarget(target)
-
-        if configuration.strategy?.branch != nil, let branch {
-          configuration = configuration.mergingStrategy(.branch(branch))
-        } else if let semvar {
-          configuration = configuration.mergingStrategy(.semvar(semvar))
-        }
 
         logger.debug("Configuration: \(configuration)")
 

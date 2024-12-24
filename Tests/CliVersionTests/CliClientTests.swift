@@ -97,6 +97,8 @@ struct CliClientTests {
       $0.fileClient.fileExists = { _ in false }
       $0.gitClient = .mock(.tag("1.0.0"))
       $0.cliClient = .liveValue
+      $0.configurationClient = .liveValue
+      $0.configurationClient.find = { _ in URL(filePath: "/") }
       setupDependencies(&$0)
     } operation: {
       try await operation()
@@ -140,10 +142,6 @@ extension CliClient.SharedOptions {
       target: .init(module: .init(target)),
       branch: versionStrategy.branch,
       semvar: versionStrategy.semvar
-      // configuration: .init(
-      //   target: .init(module: .init(target)),
-      //   strategy: versionStrategy
-      // )
     )
   }
 }

@@ -1,6 +1,6 @@
 PLATFORM_MACOS = macOS
 CONFIG := debug
-DOCC_TARGET ?= CliVersion
+DOCC_TARGET ?= CliClient
 DOCC_BASEPATH = $(shell basename "$(PWD)")
 DOCC_DIR ?= ./docs
 SWIFT_VERSION ?= "5.10"

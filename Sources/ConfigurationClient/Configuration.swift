@@ -21,9 +21,11 @@ public struct Configuration: Codable, Equatable, Sendable {
     self.strategy = strategy
   }
 
-  public static var mock: Self {
+  public static var `default`: Self { .mock(module: "<my-tool>") }
+
+  public static func mock(module: String = "cli-version") -> Self {
     .init(
-      target: .init(module: .init("cli-version")),
+      target: .init(module: .init(module)),
       strategy: .semvar(.init())
     )
   }
