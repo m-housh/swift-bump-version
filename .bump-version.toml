@@ -2,6 +2,12 @@
 requireExistingFile = true
 requireExistingSemVar = true
 
+[strategy.semvar.preRelease]
+style = 'branch'
+
+[strategy.semvar.preRelease.branch]
+includeCommitSha = true
+
 [target.module]
 fileName = 'Version.swift'
 name = 'cli-version'

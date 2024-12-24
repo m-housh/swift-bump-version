@@ -48,6 +48,7 @@ let package = Package(
       name: "ConfigurationClient",
       dependencies: [
         "FileClient",
+        .product(name: "CustomDump", package: "swift-custom-dump"),
         .product(name: "Dependencies", package: "swift-dependencies"),
         .product(name: "DependenciesMacros", package: "swift-dependencies"),
         .product(name: "TOMLKit", package: "TOMLKit")

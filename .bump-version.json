@@ -1,0 +1,25 @@
+{
+  "strategy" : {
+    "semvar" : {
+      "preRelease" : {
+        "strategy" : {
+          "command" : {
+            "arguments" : [
+              "git",
+              "describe",
+              "--tags"
+            ]
+          }
+        }
+      },
+      "requireExistingFile" : true,
+      "requireExistingSemVar" : true
+    }
+  },
+  "target" : {
+    "module" : {
+      "fileName" : "Version.swift",
+      "name" : "cli-version"
+    }
+  }
+}

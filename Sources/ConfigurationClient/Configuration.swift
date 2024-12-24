@@ -1,5 +1,8 @@
+import CustomDump
 import Foundation
 import TOMLKit
+
+// TODO: Just use json for configuration ??
 
 /// Represents configuration that can be set via a file, generally in the root of the
 /// project directory.
@@ -38,6 +41,19 @@ public struct Configuration: Codable, Equatable, Sendable {
   }
 }
 
+public struct Configuration2: Codable, Equatable, Sendable {
+  public let target: Configuration.Target?
+  public let strategy: Configuration.VersionStrategy2?
+
+  public static let mock = Self(
+    target: .init(module: .init("cli-version")),
+    strategy: .semvar(value: .init(preRelease: .init(
+      strategy: .branch()
+    )))
+    // strategy: .branch()
+  )
+}
+
 public extension Configuration {
 
   /// Represents a branch version or pre-release strategy.
@@ -58,12 +74,32 @@ public extension Configuration {
     }
   }
 
+  struct PreRelease2: Codable, Equatable, Sendable {
+
+    public let prefix: String?
+    public let strategy: Strategy
+
+    public init(
+      prefix: String? = nil,
+      strategy: Strategy
+    ) {
+      self.prefix = prefix
+      self.strategy = strategy
+    }
+
+    public enum Strategy: Codable, Equatable, Sendable {
+      case branch(includeCommitSha: Bool = true)
+      case command(arguments: [String])
+      case gitTag
+    }
+  }
+
   /// Represents version strategy for pre-release.
   ///
   /// This appends a suffix to the version that get's generated from the version strategy.
   /// For example: `1.0.0-rc-1`
   ///
-  struct PreReleaseStrategy: Codable, Equatable, Sendable {
+  struct PreReleaseStrategy: Codable, Equatable, Sendable, CustomDumpReflectable {
 
     /// Use branch and commit sha as pre-release suffix.
     public let branch: Branch?
@@ -76,7 +112,7 @@ public extension Configuration {
 
     /// Whether we use `git describe --tags` for part of the suffix, this is only used
     /// if we have a custom style.
-    public let usesGitTag: Bool
+    public let usesGitTag: Bool?
 
     init(
       style: StyleId,
@@ -88,6 +124,30 @@ public extension Configuration {
       self.prefix = prefix
       self.style = style
       self.usesGitTag = usesGitTag
+    }
+
+    public var customDumpMirror: Mirror {
+      guard let branch else {
+        return .init(
+          self,
+          children: [
+            "style": style,
+            "prefix": prefix as Any,
+            "usesGitTag": style == .gitTag ? true : (usesGitTag ?? false)
+          ],
+          displayStyle: .struct
+        )
+        // return .init(reflecting: self)
+      }
+      return .init(
+        self,
+        children: [
+          "style": style,
+          "branch": branch,
+          "prefix": prefix as Any
+        ],
+        displayStyle: .struct
+      )
     }
 
     /// Represents a pre-release strategy that is derived from calling
@@ -154,11 +214,34 @@ public extension Configuration {
 
   }
 
+  struct SemVar2: Codable, Equatable, Sendable {
+
+    /// Optional pre-releas suffix strategy.
+    public let preRelease: PreRelease2?
+
+    /// Fail if an existing version file does not exist in the target.
+    public let requireExistingFile: Bool
+
+    /// Fail if an existing semvar is not parsed from the file or version generation strategy.
+    public let requireExistingSemVar: Bool
+
+    public init(
+      preRelease: PreRelease2? = nil,
+      requireExistingFile: Bool = true,
+      requireExistingSemVar: Bool = true
+    ) {
+      self.preRelease = preRelease
+      self.requireExistingFile = requireExistingFile
+      self.requireExistingSemVar = requireExistingSemVar
+    }
+
+  }
+
   /// Represents the target where we will bump the version in.
   ///
   /// This can either be a path to a version file or a module used to
   /// locate the version file.
-  struct Target: Codable, Equatable, Sendable {
+  struct Target: Codable, Equatable, Sendable, CustomDumpReflectable {
 
     /// The path to a version file.
     public let path: String?
@@ -206,6 +289,44 @@ public extension Configuration {
         self.name = name
         self.fileName = fileName
       }
+
+    }
+
+    public var customDumpMirror: Mirror {
+      guard let module else {
+        guard let path else { return .init(reflecting: self) }
+        return .init(
+          self,
+          children: [
+            "path": path
+          ],
+          displayStyle: .struct
+        )
+      }
+      return .init(
+        self,
+        children: [
+          "module": module
+        ],
+        displayStyle: .struct
+      )
+    }
+  }
+
+  enum VersionStrategy2: Codable, Equatable, Sendable {
+    case branch(includeCommitSha: Bool = true)
+    case semvar(
+      preRelease: PreRelease2? = nil,
+      requireExistingFile: Bool? = nil,
+      requireExistingSemVar: Bool? = nil
+    )
+
+    static func semvar(value: SemVar2) -> Self {
+      .semvar(
+        preRelease: value.preRelease,
+        requireExistingFile: value.requireExistingFile,
+        requireExistingSemVar: value.requireExistingSemVar
+      )
     }
   }
 
@@ -214,7 +335,7 @@ public extension Configuration {
   /// Typically a `SemVar` strategy or `Branch`.
   ///
   ///
-  struct VersionStrategy: Codable, Equatable, Sendable {
+  struct VersionStrategy: Codable, Equatable, Sendable, CustomDumpReflectable {
 
     /// Set if we're using the branch and commit sha to derive the version.
     public let branch: Branch?
@@ -238,6 +359,28 @@ public extension Configuration {
     public init(semvar: SemVar = .init()) {
       self.branch = nil
       self.semvar = semvar
+    }
+
+    public var customDumpMirror: Mirror {
+      if let branch {
+        return .init(
+          self,
+          children: [
+            "branch": branch
+          ],
+          displayStyle: .struct
+        )
+      } else if let semvar {
+        return .init(
+          self,
+          children: [
+            "semvar": semvar
+          ],
+          displayStyle: .struct
+        )
+      } else {
+        return .init(reflecting: self)
+      }
     }
 
   }
