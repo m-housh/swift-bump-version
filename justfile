@@ -1,5 +1,5 @@
-product := "cli-version"
-docker_image := "cli-version"
+product := "bump-version"
+docker_image := "bump-version"
 docker_tag := "test"
 
 [private]

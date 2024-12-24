@@ -26,7 +26,7 @@ let package = Package(
   ],
   targets: [
     .executableTarget(
-      name: "cli-version",
+      name: "bump-version",
       dependencies: [
         "CliClient",
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
@@ -84,7 +84,7 @@ let package = Package(
       name: "BuildWithVersionPlugin",
       capability: .buildTool(),
       dependencies: [
-        "cli-version"
+        "bump-version"
       ]
     ),
     .plugin(
@@ -99,7 +99,7 @@ let package = Package(
         ]
       ),
       dependencies: [
-        "cli-version"
+        "bump-version"
       ]
     ),
     .plugin(
@@ -114,7 +114,7 @@ let package = Package(
         ]
       ),
       dependencies: [
-        "cli-version"
+        "bump-version"
       ]
     )
   ]
