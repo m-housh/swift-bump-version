@@ -150,13 +150,13 @@ public extension Configuration {
 
     /// Represents a module target for a version file.
     ///
-    public struct Module: Codable, Equatable, Sendable {
+    public struct Module: Codable, Equatable, Sendable, CustomDumpReflectable {
 
       /// The module directory name.
       public let name: String
 
       /// The version file name located in the module directory.
-      public let fileName: String
+      public let fileName: String?
 
       /// Create a new module target.
       ///
@@ -165,10 +165,25 @@ public extension Configuration {
       ///   - fileName: The file name located in the module directory.
       public init(
         _ name: String,
-        fileName: String = "Version.swift"
+        fileName: String? = "Version.swift"
       ) {
         self.name = name
         self.fileName = fileName
+      }
+
+      public var fileNameOrDefault: String {
+        fileName ?? "Version.swift"
+      }
+
+      public var customDumpMirror: Mirror {
+        .init(
+          self,
+          children: [
+            "name": name,
+            "fileName": fileNameOrDefault
+          ],
+          displayStyle: .struct
+        )
       }
 
     }

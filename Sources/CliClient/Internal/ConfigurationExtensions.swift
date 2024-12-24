@@ -47,7 +47,7 @@ extension Configuration.Target {
         path = "Sources/\(path)"
       }
 
-      filePath = "\(path)/\(module.fileName)"
+      filePath = "\(path)/\(module.fileNameOrDefault)"
     }
 
     if let gitDirectory {

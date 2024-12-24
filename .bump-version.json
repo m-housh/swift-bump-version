@@ -1,12 +1,14 @@
 {
   "strategy" : {
-    "branch" : {
-      "includeCommitSha": true
+    "semvar" : {
+      "preRelease" : {
+        "strategy" : { "gitTag" : {} }
+      }
     }
   },
   "target" : {
     "module" : {
-      "name" : "cli-version"
+      "name" : "bump-version"
     }
   }
 }
