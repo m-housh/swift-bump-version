@@ -6,7 +6,6 @@
   },
   "target" : {
     "module" : {
-      "fileName" : "Version.swift",
       "name" : "cli-version"
     }
   }

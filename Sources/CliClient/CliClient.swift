@@ -6,8 +6,6 @@ import Foundation
 import GitClient
 import ShellClient
 
-// TODO: Integrate ConfigurationClient
-
 public extension DependencyValues {
 
   var cliClient: CliClient {
@@ -35,26 +33,55 @@ public struct CliClient: Sendable {
 
   public struct SharedOptions: Equatable, Sendable {
 
+    let allowPreReleaseTag: Bool
     let dryRun: Bool
     let gitDirectory: String?
     let logLevel: Logger.Level
-    let configuration: Configuration
+    let target: Configuration.Target?
+    let branch: Configuration.Branch?
+    let semvar: Configuration.SemVar?
+    let configurationFile: String?
 
     public init(
+      allowPreReleaseTag: Bool = true,
       dryRun: Bool = false,
       gitDirectory: String? = nil,
       logLevel: Logger.Level = .debug,
-      configuration: Configuration
+      target: Configuration.Target? = nil,
+      branch: Configuration.Branch? = nil,
+      semvar: Configuration.SemVar? = nil,
+      configurationFile: String? = nil
     ) {
+      self.allowPreReleaseTag = allowPreReleaseTag
       self.dryRun = dryRun
       self.gitDirectory = gitDirectory
       self.logLevel = logLevel
-      self.configuration = configuration
+      self.target = target
+      self.branch = branch
+      self.semvar = semvar
+      self.configurationFile = configurationFile
     }
 
-    var allowPreReleaseTag: Bool {
-      guard let semvar = configuration.strategy?.semvar else { return false }
-      return semvar.preRelease != nil
+    public init(
+      allowPreReleaseTag: Bool = true,
+      dryRun: Bool = false,
+      gitDirectory: String? = nil,
+      verbose: Int,
+      target: Configuration.Target? = nil,
+      branch: Configuration.Branch? = nil,
+      semvar: Configuration.SemVar? = nil,
+      configurationFile: String? = nil
+    ) {
+      self.init(
+        allowPreReleaseTag: allowPreReleaseTag,
+        dryRun: dryRun,
+        gitDirectory: gitDirectory,
+        logLevel: .init(verbose: verbose),
+        target: target,
+        branch: branch,
+        semvar: semvar,
+        configurationFile: configurationFile
+      )
     }
   }
 

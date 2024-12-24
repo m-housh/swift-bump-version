@@ -9,6 +9,9 @@ let package = Package(
   ],
   products: [
     .library(name: "CliClient", targets: ["CliClient"]),
+    .library(name: "ConfigurationClient", targets: ["ConfigurationClient"]),
+    .library(name: "FileClient", targets: ["FileClient"]),
+    .library(name: "GitClient", targets: ["GitClient"]),
     .plugin(name: "BuildWithVersionPlugin", targets: ["BuildWithVersionPlugin"]),
     .plugin(name: "GenerateVersionPlugin", targets: ["GenerateVersionPlugin"]),
     .plugin(name: "UpdateVersionPlugin", targets: ["UpdateVersionPlugin"])

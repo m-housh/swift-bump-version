@@ -5,7 +5,7 @@ import Dependencies
 import Foundation
 import Rainbow
 
-struct GlobalOptions<Child: ParsableArguments>: ParsableArguments {
+struct GlobalOptions: ParsableArguments {
 
   @Option(
     name: .shortAndLong,
@@ -14,7 +14,17 @@ struct GlobalOptions<Child: ParsableArguments>: ParsableArguments {
   var configurationFile: String?
 
   @OptionGroup var targetOptions: TargetOptions
-  @OptionGroup var child: Child
+
+  @OptionGroup var semvarOptions: SemVarOptions
+
+  @Flag(
+    name: .long,
+    inversion: .prefixedNo,
+    help: """
+    Include the short commit sha in version or pre-release branch style output.
+    """
+  )
+  var commitSha: Bool = true
 
   @Option(
     name: .customLong("git-directory"),
@@ -35,8 +45,6 @@ struct GlobalOptions<Child: ParsableArguments>: ParsableArguments {
   var verbose: Int
 
 }
-
-struct Empty: ParsableArguments {}
 
 struct TargetOptions: ParsableArguments {
   @Option(
@@ -59,7 +67,16 @@ struct TargetOptions: ParsableArguments {
 
 }
 
+// TODO: Need to be able to pass in arguments for custom command pre-release option.
+
 struct PreReleaseOptions: ParsableArguments {
+
+  @Flag(
+    name: .shortAndLong,
+    help: ""
+  )
+  var disablePreRelease: Bool = false
+
   @Flag(
     name: [.customShort("s"), .customLong("pre-release-branch-style")],
     help: """
@@ -79,11 +96,20 @@ struct PreReleaseOptions: ParsableArguments {
   @Option(
     name: .long,
     help: """
+    Add / use a pre-release prefix string.
+    """
+  )
+  var preReleasePrefix: String?
+
+  @Option(
+    name: .long,
+    help: """
     Apply custom pre-release suffix, can also use branch or tag along with this
     option as a prefix, used if branch is not set. (example: \"rc\")
     """
   )
   var custom: String?
+
 }
 
 struct SemVarOptions: ParsableArguments {
@@ -105,25 +131,7 @@ struct SemVarOptions: ParsableArguments {
   @OptionGroup var preRelease: PreReleaseOptions
 }
 
-typealias GlobalSemVarOptions = GlobalOptions<SemVarOptions>
-typealias GlobalBranchOptions = GlobalOptions<Empty>
-
-extension GlobalSemVarOptions {
-  func shared() async throws -> CliClient.SharedOptions {
-    try await withConfiguration(path: configurationFile) { configuration in
-      try shared(configuration.mergingStrategy(.semvar(child.configSemVarOptions())))
-    }
-  }
-}
-
-extension GlobalBranchOptions {
-  func shared() async throws -> CliClient.SharedOptions {
-    try await withConfiguration(path: configurationFile) { configuration in
-      try shared(configuration.mergingStrategy(.branch()))
-    }
-  }
-}
-
+// TODO: Move these to global options.
 extension CliClient.SharedOptions {
 
   func run(_ keyPath: KeyPath<CliClient, @Sendable (Self) async throws -> String>) async throws {
@@ -156,12 +164,16 @@ extension CliClient.SharedOptions {
 
 extension GlobalOptions {
 
-  func shared(_ configuration: Configuration) throws -> CliClient.SharedOptions {
-    .init(
+  func shared() throws -> CliClient.SharedOptions {
+    try .init(
+      allowPreReleaseTag: !semvarOptions.preRelease.disablePreRelease,
       dryRun: dryRun,
       gitDirectory: gitDirectory,
-      logLevel: .init(verbose: verbose),
-      configuration: configuration
+      verbose: verbose,
+      target: targetOptions.configTarget(),
+      branch: .init(includeCommitSha: commitSha),
+      semvar: semvarOptions.configSemVarOptions(),
+      configurationFile: configurationFile
     )
   }
 
@@ -170,20 +182,6 @@ extension GlobalOptions {
 // MARK: - Helpers
 
 private extension TargetOptions {
-  func target() throws -> String {
-    guard let path else {
-      guard let module else {
-        print("Neither target path or module was set.")
-        throw InvalidTargetOption()
-      }
-
-      return "\(module)/\(fileName)"
-    }
-    return path
-  }
-
-  struct InvalidTargetOption: Error {}
-
   func configTarget() throws -> Configuration.Target? {
     guard let path else {
       guard let module else {

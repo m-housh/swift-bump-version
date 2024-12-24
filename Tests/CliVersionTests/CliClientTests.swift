@@ -133,14 +133,17 @@ extension CliClient.SharedOptions {
     logLevel: Logger.Level = .trace,
     versionStrategy: Configuration.VersionStrategy = .semvar(.init())
   ) -> Self {
-    .init(
+    return .init(
       dryRun: dryRun,
       gitDirectory: gitDirectory,
       logLevel: logLevel,
-      configuration: .init(
-        target: .init(module: .init(target)),
-        strategy: versionStrategy
-      )
+      target: .init(module: .init(target)),
+      branch: versionStrategy.branch,
+      semvar: versionStrategy.semvar
+      // configuration: .init(
+      //   target: .init(module: .init(target)),
+      //   strategy: versionStrategy
+      // )
     )
   }
 }

@@ -1,3 +1,4 @@
+import ConfigurationClient
 import Dependencies
 import FileClient
 import Foundation
@@ -13,19 +14,37 @@ public extension CliClient.SharedOptions {
     try await withDependencies {
       $0.logger.logLevel = logLevel
     } operation: {
-      @Dependency(\.logger) var logger
+      // Load the default configuration, if it exists.
+      try await withConfiguration(path: configurationFile) { configuration in
+        @Dependency(\.logger) var logger
 
-      let targetUrl = try configuration.targetUrl(gitDirectory: gitDirectory)
-      logger.debug("Target: \(targetUrl.cleanFilePath)")
+        // Merge any configuration set from caller into default configuration.
+        var configuration = configuration
+        configuration = configuration.mergingTarget(target)
 
-      try await operation(
-        configuration.currentVersion(
-          targetUrl: targetUrl,
-          gitDirectory: gitDirectory
+        if configuration.strategy?.branch != nil, let branch {
+          configuration = configuration.mergingStrategy(.branch(branch))
+        } else if let semvar {
+          configuration = configuration.mergingStrategy(.semvar(semvar))
+        }
+
+        logger.debug("Configuration: \(configuration)")
+
+        // This will fail if the target url is not set properly.
+        let targetUrl = try configuration.targetUrl(gitDirectory: gitDirectory)
+        logger.debug("Target: \(targetUrl.cleanFilePath)")
+
+        // Perform the operation, which generates the new version and writes it.
+        try await operation(
+          configuration.currentVersion(
+            targetUrl: targetUrl,
+            gitDirectory: gitDirectory
+          )
         )
-      )
 
-      return targetUrl.cleanFilePath
+        // Return the file path we wrote the version to.
+        return targetUrl.cleanFilePath
+      }
     }
   }
 
