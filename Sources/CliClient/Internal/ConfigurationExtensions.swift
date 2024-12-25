@@ -175,7 +175,7 @@ public extension Configuration.SemVar {
       )
     }
 
-    if requireExistingFile {
+    if requireExistingFile == true {
       logger.debug("Failed to parse existing file, and caller requires it.")
       throw CliClientError.fileDoesNotExist(path: file.cleanFilePath)
     }
@@ -195,7 +195,7 @@ public extension Configuration.SemVar {
       )
     }
 
-    if requireExistingSemVar {
+    if requireExistingSemVar == true {
       logger.trace("Caller requires existing semvar and it was not found in file or git-tag.")
       throw CliClientError.semVarNotFound
     }

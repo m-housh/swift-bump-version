@@ -1,14 +1,10 @@
 {
+  "target" : {
+    "module" : { "name" : "cli-version" }
+  },
   "strategy" : {
     "semvar" : {
-      "preRelease" : {
-        "strategy" : { "gitTag" : {} }
-      }
-    }
-  },
-  "target" : {
-    "module" : {
-      "name" : "bump-version"
+      "strategy" : { "gitTag": { "exactMatch": false } }
     }
   }
 }

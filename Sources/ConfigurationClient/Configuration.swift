@@ -26,7 +26,7 @@ public struct Configuration: Codable, Equatable, Sendable {
   public static func mock(module: String = "cli-version") -> Self {
     .init(
       target: .init(module: .init(module)),
-      strategy: .semvar(.init())
+      strategy: .semvar(.init(strategy: .gitTag(exactMatch: false)))
     )
   }
 
@@ -99,28 +99,36 @@ public extension Configuration {
   ///
   struct SemVar: Codable, Equatable, Sendable {
 
+    public let allowPreRelease: Bool?
+
     /// Optional pre-releas suffix strategy.
     public let preRelease: PreRelease?
 
     /// Fail if an existing version file does not exist in the target.
-    public let requireExistingFile: Bool
+    public let requireExistingFile: Bool?
 
     /// Fail if an existing semvar is not parsed from the file or version generation strategy.
-    public let requireExistingSemVar: Bool
+    public let requireExistingSemVar: Bool?
+
+    public let strategy: Strategy?
 
     public init(
+      allowPreRelease: Bool? = true,
       preRelease: PreRelease? = nil,
-      requireExistingFile: Bool = true,
-      requireExistingSemVar: Bool = true
+      requireExistingFile: Bool? = true,
+      requireExistingSemVar: Bool? = true,
+      strategy: Strategy? = nil
     ) {
+      self.allowPreRelease = allowPreRelease
       self.preRelease = preRelease
       self.requireExistingFile = requireExistingFile
       self.requireExistingSemVar = requireExistingSemVar
+      self.strategy = strategy
     }
 
     public enum Strategy: Codable, Equatable, Sendable {
       case command(arguments: [String])
-      case gitTag(exactMatch: Bool = false)
+      case gitTag(exactMatch: Bool? = false)
     }
 
   }
@@ -172,7 +180,7 @@ public extension Configuration {
       ///   - fileName: The file name located in the module directory.
       public init(
         _ name: String,
-        fileName: String? = "Version.swift"
+        fileName: String? = nil
       ) {
         self.name = name
         self.fileName = fileName
@@ -225,9 +233,11 @@ public extension Configuration {
     case branch(includeCommitSha: Bool = true)
 
     case semvar(
+      allowPreRelease: Bool? = nil,
       preRelease: PreRelease? = nil,
       requireExistingFile: Bool? = nil,
-      requireExistingSemVar: Bool? = nil
+      requireExistingSemVar: Bool? = nil,
+      strategy: SemVar.Strategy? = nil
     )
 
     public var branch: Branch? {
@@ -238,12 +248,14 @@ public extension Configuration {
     }
 
     public var semvar: SemVar? {
-      guard case let .semvar(preRelease, requireExistingFile, requireExistingSemVar) = self
+      guard case let .semvar(allowPreRelease, preRelease, requireExistingFile, requireExistingSemVar, strategy) = self
       else { return nil }
       return .init(
+        allowPreRelease: allowPreRelease,
         preRelease: preRelease,
         requireExistingFile: requireExistingFile ?? false,
-        requireExistingSemVar: requireExistingSemVar ?? false
+        requireExistingSemVar: requireExistingSemVar ?? false,
+        strategy: strategy
       )
     }
 
@@ -253,9 +265,11 @@ public extension Configuration {
 
     public static func semvar(_ value: SemVar) -> Self {
       .semvar(
+        allowPreRelease: value.allowPreRelease,
         preRelease: value.preRelease,
         requireExistingFile: value.requireExistingFile,
-        requireExistingSemVar: value.requireExistingSemVar
+        requireExistingSemVar: value.requireExistingSemVar,
+        strategy: value.strategy
       )
     }
 

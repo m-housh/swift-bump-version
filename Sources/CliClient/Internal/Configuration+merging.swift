@@ -36,11 +36,14 @@ extension Configuration.Branch {
 }
 
 extension Configuration.SemVar {
+  // TODO: Merge strategy ??
   func merging(_ other: Self?) -> Self {
     .init(
+      allowPreRelease: other?.allowPreRelease ?? allowPreRelease,
       preRelease: preRelease?.merging(other?.preRelease),
       requireExistingFile: other?.requireExistingFile ?? requireExistingFile,
-      requireExistingSemVar: other?.requireExistingSemVar ?? requireExistingSemVar
+      requireExistingSemVar: other?.requireExistingSemVar ?? requireExistingSemVar,
+      strategy: other?.strategy ?? strategy
     )
   }
 }

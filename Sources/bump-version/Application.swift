@@ -10,7 +10,7 @@ struct Application: AsyncParsableCommand {
       BuildCommand.self,
       BumpCommand.self,
       GenerateCommand.self,
-      UtilsCommand.self
+      ConfigCommand.self
     ],
     defaultSubcommand: BumpCommand.self
   )

@@ -44,7 +44,6 @@ struct CliClientTests {
       if type != .preRelease {
         #expect(string != nil)
       }
-
       let typeString = optional ? "String?" : "String"
 
       switch type {

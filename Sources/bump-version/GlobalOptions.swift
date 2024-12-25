@@ -31,7 +31,7 @@ struct GlobalOptions: ParsableArguments {
   @Argument(
     help: """
     Arguments / options used for custom pre-release, options / flags must proceed a '--' in
-    the command. These are ignored if the `--custom` flag is not set.
+    the command. These are ignored if the `--custom` or `--custom-pre-release` flag is not set.
     """
   )
   var extraOptions: [String] = []
@@ -40,7 +40,7 @@ struct GlobalOptions: ParsableArguments {
 
 struct ConfigurationOptions: ParsableArguments {
   @Option(
-    name: .shortAndLong,
+    name: [.customShort("f"), .long],
     help: "Specify the path to a configuration file.",
     completion: .file(extensions: ["json"])
   )
@@ -63,22 +63,22 @@ struct ConfigurationOptions: ParsableArguments {
 
 struct TargetOptions: ParsableArguments {
   @Option(
-    name: .shortAndLong,
+    name: [.customShort("p"), .long],
     help: "Path to the version file, not required if module is set."
   )
-  var path: String?
+  var targetFilePath: String?
 
   @Option(
-    name: .shortAndLong,
+    name: [.customShort("m"), .long],
     help: "The target module name or directory path, not required if path is set."
   )
-  var module: String?
+  var targetModule: String?
 
   @Option(
     name: [.customShort("n"), .long],
-    help: "The file name inside the target module, required if module is set."
+    help: "The file name inside the target module. (defaults to: \"Version.swift\")."
   )
-  var fileName: String = "Version.swift"
+  var targetFileName: String?
 
 }
 
@@ -91,7 +91,7 @@ struct PreReleaseOptions: ParsableArguments {
   var disablePreRelease: Bool = false
 
   @Flag(
-    name: [.customShort("s"), .customLong("pre-release-branch-style")],
+    name: [.customShort("b"), .customLong("pre-release-branch-style")],
     help: """
     Use branch name and commit sha for pre-release suffix, ignored if branch is set.
     """
@@ -124,7 +124,21 @@ struct PreReleaseOptions: ParsableArguments {
 
 }
 
+// TODO: Add custom command strategy.
 struct SemVarOptions: ParsableArguments {
+
+  @Flag(
+    name: .long,
+    inversion: .prefixedEnableDisable,
+    help: "Use git-tag strategy for semvar."
+  )
+  var gitTag: Bool = true
+
+  @Flag(
+    name: .long,
+    help: "Require exact match for git tag strategy."
+  )
+  var requireExactMatch: Bool = false
 
   @Flag(
     name: .long,
@@ -136,9 +150,18 @@ struct SemVarOptions: ParsableArguments {
 
   @Flag(
     name: .long,
-    help: "Fail if a sem-var is not parsed from existing file or git tag, used if branch is not set."
+    help: "Fail if a semvar is not parsed from existing file or git tag, used if branch is not set."
   )
   var requireExistingSemvar: Bool = false
+
+  @Flag(
+    name: .shortAndLong,
+    help: """
+    Custom command strategy, uses extra-options to call an external command.
+    The external command should return a semvar that is used.
+    """
+  )
+  var customCommand: Bool = false
 
   @OptionGroup var preRelease: PreReleaseOptions
 }
