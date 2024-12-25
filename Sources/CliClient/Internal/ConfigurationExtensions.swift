@@ -2,6 +2,7 @@ import ConfigurationClient
 import Dependencies
 import Foundation
 import GitClient
+import ShellClient
 
 extension Configuration {
   func targetUrl(gitDirectory: String?) throws -> URL {
@@ -58,26 +59,46 @@ extension Configuration.Target {
 }
 
 extension GitClient {
-  func version(branch: Configuration.Branch, gitDirectory: String?) async throws -> String {
+  func version(includeCommitSha: Bool, gitDirectory: String?) async throws -> String {
     @Dependency(\.gitClient) var gitClient
 
     return try await gitClient.version(.init(
       gitDirectory: gitDirectory,
-      style: .branch(commitSha: branch.includeCommitSha)
+      style: .branch(commitSha: includeCommitSha)
     )).description
   }
 }
 
 extension Configuration.PreRelease {
 
-  func preReleaseString(gitDirectory: String?) async throws -> String {
+  // FIX: This needs to handle the pre-release type appropriatly.
+  func preReleaseString(gitDirectory: String?) async throws -> PreReleaseString? {
+    guard let strategy else { return nil }
+
+    @Dependency(\.asyncShellClient) var asyncShellClient
     @Dependency(\.gitClient) var gitClient
+    @Dependency(\.logger) var logger
 
-    let preReleaseString: String
+    var preReleaseString: String
+    var suffix = true
+    var allowsPrefix = true
 
-    if let branch = strategy?.branch {
-      preReleaseString = try await gitClient.version(branch: branch, gitDirectory: gitDirectory)
-    } else {
+    switch strategy {
+    case let .branch(includeCommitSha: includeCommitSha):
+      logger.trace("Branch pre-release strategy, includeCommitSha: \(includeCommitSha).")
+      preReleaseString = try await gitClient.version(
+        includeCommitSha: includeCommitSha,
+        gitDirectory: gitDirectory
+      )
+    case let .command(arguments: arguments):
+      logger.trace("Command pre-release strategy, arguments: \(arguments).")
+      // TODO: What to do with allows prefix? Need a configuration setting for commands.
+      preReleaseString = try await asyncShellClient.background(.init(arguments))
+    case .gitTag:
+      logger.trace("Git tag pre-release strategy.")
+      logger.trace("This will ignore any set prefix.")
+      suffix = false
+      allowsPrefix = false
       preReleaseString = try await gitClient.version(.init(
         gitDirectory: gitDirectory,
         style: .tag(exactMatch: false)
@@ -85,9 +106,22 @@ extension Configuration.PreRelease {
     }
 
     if let prefix {
-      return "\(prefix)-\(preReleaseString)"
+      if allowsPrefix {
+        preReleaseString = "\(prefix)-\(preReleaseString)"
+      } else {
+        logger.warning("Found prefix, but pre-release strategy may not work properly, ignoring prefix.")
+      }
     }
-    return preReleaseString
+
+    guard suffix else { return .semvar(preReleaseString) }
+    return .suffix(preReleaseString)
+
+    // return preReleaseString
+  }
+
+  enum PreReleaseString: Sendable {
+    case suffix(String)
+    case semvar(String)
   }
 }
 
@@ -97,15 +131,28 @@ public extension Configuration.SemVar {
   private func applyingPreRelease(_ semVar: SemVar, _ gitDirectory: String?) async throws -> SemVar {
     @Dependency(\.logger) var logger
     logger.trace("Start apply pre-release to: \(semVar)")
-    guard let preReleaseStrategy = self.preRelease else {
+
+    guard let preReleaseStrategy = self.preRelease,
+          let preRelease = try await preReleaseStrategy.preReleaseString(gitDirectory: gitDirectory)
+    else {
       logger.trace("No pre-release strategy, returning original semvar.")
       return semVar
     }
 
-    let preRelease = try await preReleaseStrategy.preReleaseString(gitDirectory: gitDirectory)
+    // let preRelease = try await preReleaseStrategy.preReleaseString(gitDirectory: gitDirectory)
     logger.trace("Pre-release string: \(preRelease)")
 
-    return semVar.applyingPreRelease(preRelease)
+    switch preRelease {
+    case let .suffix(string):
+      return semVar.applyingPreRelease(string)
+    case let .semvar(string):
+      guard let semvar = SemVar(string: string) else {
+        throw CliClientError.preReleaseParsingError(string)
+      }
+      return semvar
+    }
+
+    // return semVar.applyingPreRelease(preRelease)
   }
 
   func currentVersion(file: URL, gitDirectory: String? = nil) async throws -> CurrentVersionContainer.Version {
@@ -181,7 +228,7 @@ extension Configuration.VersionStrategy {
     return try await .init(
       targetUrl: targetUrl,
       version: .string(
-        gitClient.version(branch: branch, gitDirectory: gitDirectory)
+        gitClient.version(includeCommitSha: branch.includeCommitSha, gitDirectory: gitDirectory)
       )
     )
   }

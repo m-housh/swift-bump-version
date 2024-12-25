@@ -1,4 +1,5 @@
 import ConfigurationClient
+import CustomDump
 import Dependencies
 import FileClient
 import Foundation
@@ -6,6 +7,40 @@ import GitClient
 
 @_spi(Internal)
 public extension CliClient.SharedOptions {
+
+  /// All cli-client calls should run through this, it set's up logging,
+  /// loads configuration, and generates the current version based on the
+  /// configuration.
+  @discardableResult
+  func run(
+    _ operation: (CurrentVersionContainer) async throws -> Void
+  ) async rethrows -> String {
+    try await loggingOptions.withLogger {
+      // Load the default configuration, if it exists.
+      try await withMergedConfiguration { configuration in
+        @Dependency(\.logger) var logger
+
+        var configurationString = ""
+        customDump(configuration, to: &configurationString)
+        logger.trace("\nConfiguration: \(configurationString)")
+
+        // This will fail if the target url is not set properly.
+        let targetUrl = try configuration.targetUrl(gitDirectory: gitDirectory)
+        logger.debug("Target: \(targetUrl.cleanFilePath)")
+
+        // Perform the operation, which generates the new version and writes it.
+        try await operation(
+          configuration.currentVersion(
+            targetUrl: targetUrl,
+            gitDirectory: gitDirectory
+          )
+        )
+
+        // Return the file path we wrote the version to.
+        return targetUrl.cleanFilePath
+      }
+    }
+  }
 
   // Merges any configuration set via the passed in options.
   @discardableResult
@@ -26,37 +61,6 @@ public extension CliClient.SharedOptions {
     }
   }
 
-  @discardableResult
-  func run(
-    _ operation: (CurrentVersionContainer) async throws -> Void
-  ) async rethrows -> String {
-    try await withDependencies {
-      $0.logger.logLevel = logLevel
-    } operation: {
-      // Load the default configuration, if it exists.
-      try await withMergedConfiguration { configuration in
-        @Dependency(\.logger) var logger
-
-        logger.debug("Configuration: \(configuration)")
-
-        // This will fail if the target url is not set properly.
-        let targetUrl = try configuration.targetUrl(gitDirectory: gitDirectory)
-        logger.debug("Target: \(targetUrl.cleanFilePath)")
-
-        // Perform the operation, which generates the new version and writes it.
-        try await operation(
-          configuration.currentVersion(
-            targetUrl: targetUrl,
-            gitDirectory: gitDirectory
-          )
-        )
-
-        // Return the file path we wrote the version to.
-        return targetUrl.cleanFilePath
-      }
-    }
-  }
-
   func write(_ string: String, to url: URL) async throws {
     @Dependency(\.fileClient) var fileClient
     @Dependency(\.logger) var logger
@@ -64,7 +68,7 @@ public extension CliClient.SharedOptions {
       try await fileClient.write(string: string, to: url)
     } else {
       logger.debug("Skipping, due to dry-run being passed.")
-      logger.debug("\(string)")
+      logger.debug("\n\(string)\n")
     }
   }
 

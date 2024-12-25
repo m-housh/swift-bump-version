@@ -20,6 +20,15 @@ extension Configuration {
   }
 }
 
+extension Configuration.PreRelease {
+  func merging(_ other: Self?) -> Self {
+    .init(
+      prefix: other?.prefix ?? prefix,
+      strategy: other?.strategy ?? strategy
+    )
+  }
+}
+
 extension Configuration.Branch {
   func merging(_ other: Self?) -> Self {
     return .init(includeCommitSha: other?.includeCommitSha ?? includeCommitSha)
@@ -29,7 +38,7 @@ extension Configuration.Branch {
 extension Configuration.SemVar {
   func merging(_ other: Self?) -> Self {
     .init(
-      preRelease: other?.preRelease ?? preRelease,
+      preRelease: preRelease?.merging(other?.preRelease),
       requireExistingFile: other?.requireExistingFile ?? requireExistingFile,
       requireExistingSemVar: other?.requireExistingSemVar ?? requireExistingSemVar
     )

@@ -4,8 +4,10 @@ import Dependencies
 
 struct BumpCommand: AsyncParsableCommand {
 
+  static let commandName = "bump"
+
   static let configuration = CommandConfiguration(
-    commandName: "bump",
+    commandName: Self.commandName,
     abstract: "Bump version of a command-line tool."
   )
 
@@ -19,7 +21,7 @@ struct BumpCommand: AsyncParsableCommand {
   var bumpOption: CliClient.BumpOption = .patch
 
   func run() async throws {
-    try await globals.run(\.bump, args: bumpOption)
+    try await globals.run(\.bump, command: Self.commandName, args: bumpOption)
   }
 }
 

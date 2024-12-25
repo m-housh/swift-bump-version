@@ -4,4 +4,5 @@ enum CliClientError: Error {
   case fileDoesNotExist(path: String)
   case failedToParseVersionFile
   case semVarNotFound
+  case preReleaseParsingError(String)
 }

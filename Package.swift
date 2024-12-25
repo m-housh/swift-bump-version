@@ -40,7 +40,8 @@ let package = Package(
         "ConfigurationClient",
         "FileClient",
         "GitClient",
-        .product(name: "Logging", package: "swift-log")
+        .product(name: "Logging", package: "swift-log"),
+        .product(name: "CustomDump", package: "swift-custom-dump")
       ]
     ),
     .testTarget(

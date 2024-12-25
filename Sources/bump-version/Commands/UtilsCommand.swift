@@ -18,8 +18,10 @@ struct UtilsCommand: AsyncParsableCommand {
 
 extension UtilsCommand {
   struct DumpConfig: AsyncParsableCommand {
+    static let commandName = "dump-config"
+
     static let configuration = CommandConfiguration(
-      commandName: "dump-config",
+      commandName: Self.commandName,
       abstract: "Show the parsed configuration.",
       aliases: ["dc"]
     )
@@ -27,7 +29,7 @@ extension UtilsCommand {
     @OptionGroup var globals: GlobalOptions
 
     func run() async throws {
-      let configuration = try await globals.runClient(\.parsedConfiguration)
+      let configuration = try await globals.runClient(\.parsedConfiguration, command: Self.commandName)
       customDump(configuration)
     }
   }

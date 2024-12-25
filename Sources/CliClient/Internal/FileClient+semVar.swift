@@ -28,13 +28,13 @@ public extension FileClient {
     logger.debug("Version line: \(versionLine)")
 
     let isOptional = versionLine.contains("String?")
-    logger.debug("Uses optional: \(isOptional)")
+    logger.trace("Uses optional: \(isOptional)")
 
     let versionString = versionLine.split(separator: "let VERSION: \(isOptional ? "String?" : "String") = ").last
     guard let versionString else {
       throw CliClientError.failedToParseVersionFile
     }
-    logger.debug("Parsed version string: \(versionString)")
+    logger.trace("Parsed version string: \(versionString)")
     return (String(versionString), isOptional)
   }
 

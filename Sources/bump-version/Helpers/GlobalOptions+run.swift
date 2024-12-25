@@ -21,45 +21,49 @@ func withSetupDependencies<T>(
 extension GlobalOptions {
 
   func runClient<T>(
-    _ keyPath: KeyPath<CliClient, @Sendable (CliClient.SharedOptions) async throws -> T>
+    _ keyPath: KeyPath<CliClient, @Sendable (CliClient.SharedOptions) async throws -> T>,
+    command: String
   ) async throws -> T {
     try await withSetupDependencies {
       @Dependency(\.cliClient) var cliClient
-      return try await cliClient[keyPath: keyPath](shared())
+      return try await cliClient[keyPath: keyPath](shared(command: command))
     }
   }
 
   func runClient<A, T>(
     _ keyPath: KeyPath<CliClient, @Sendable (A, CliClient.SharedOptions) async throws -> T>,
+    command: String,
     args: A
   ) async throws -> T {
     try await withSetupDependencies {
       @Dependency(\.cliClient) var cliClient
-      return try await cliClient[keyPath: keyPath](args, shared())
+      return try await cliClient[keyPath: keyPath](args, shared(command: command))
     }
   }
 
   func run(
-    _ keyPath: KeyPath<CliClient, @Sendable (CliClient.SharedOptions) async throws -> String>
+    _ keyPath: KeyPath<CliClient, @Sendable (CliClient.SharedOptions) async throws -> String>,
+    command: String
   ) async throws {
-    let output = try await runClient(keyPath)
+    let output = try await runClient(keyPath, command: command)
     print(output)
   }
 
   func run<T>(
     _ keyPath: KeyPath<CliClient, @Sendable (T, CliClient.SharedOptions) async throws -> String>,
+    command: String,
     args: T
   ) async throws {
-    let output = try await runClient(keyPath, args: args)
+    let output = try await runClient(keyPath, command: command, args: args)
     print(output)
   }
 
-  func shared() throws -> CliClient.SharedOptions {
+  func shared(command: String) throws -> CliClient.SharedOptions {
     try .init(
       allowPreReleaseTag: !configOptions.semvarOptions.preRelease.disablePreRelease,
       dryRun: dryRun,
       gitDirectory: gitDirectory,
-      verbose: verbose,
+      loggingOptions: .init(command: command, verbose: verbose),
       target: configOptions.target(),
       branch: .init(includeCommitSha: configOptions.commitSha),
       semvar: configOptions.semvarOptions(extraOptions: extraOptions),
@@ -93,6 +97,8 @@ extension PreReleaseOptions {
         throw ExtraOptionsEmpty()
       }
       return .init(prefix: preReleasePrefix, strategy: .command(arguments: extraOptions))
+    } else if let preReleasePrefix {
+      return .init(prefix: preReleasePrefix, strategy: nil)
     }
     return nil
   }

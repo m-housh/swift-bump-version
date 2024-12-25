@@ -132,13 +132,12 @@ extension CliClient.SharedOptions {
     gitDirectory: String? = "/baz",
     dryRun: Bool = false,
     target: String = "bar",
-    logLevel: Logger.Level = .trace,
     versionStrategy: Configuration.VersionStrategy = .semvar(.init())
   ) -> Self {
     return .init(
       dryRun: dryRun,
       gitDirectory: gitDirectory,
-      logLevel: logLevel,
+      loggingOptions: .init(command: "test", verbose: 2),
       target: .init(module: .init(target)),
       branch: versionStrategy.branch,
       semvar: versionStrategy.semvar
