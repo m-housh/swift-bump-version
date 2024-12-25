@@ -38,7 +38,7 @@ public extension FileClient {
     return (String(versionString), isOptional)
   }
 
-  func semVar(
+  func semvar(
     file: URL,
     gitDirectory: String?
   ) async throws -> (semVar: SemVar?, usesOptionalType: Bool) {

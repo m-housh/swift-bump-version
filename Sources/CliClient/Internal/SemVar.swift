@@ -90,7 +90,7 @@ public struct SemVar: CustomStringConvertible, Equatable, Sendable {
   }
 
   // Bumps the sem-var by the given option (major, minor, patch)
-  public func bump(_ option: CliClient.BumpOption, preRelease: String?) -> Self {
+  public func bump(_ option: CliClient.BumpOption, preRelease: String? = nil) -> Self {
     switch option {
     case .major:
       return .init(

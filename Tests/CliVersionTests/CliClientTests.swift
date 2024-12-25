@@ -41,7 +41,10 @@ struct CliClientTests {
       #expect(output == "/baz/Sources/bar/Version.swift")
     } assert: { string, _ in
 
-      #expect(string != nil)
+      if type != .preRelease {
+        #expect(string != nil)
+      }
+
       let typeString = optional ? "String?" : "String"
 
       switch type {

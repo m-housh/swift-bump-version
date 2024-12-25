@@ -94,20 +94,20 @@ public struct CurrentVersionContainer: Sendable {
   var usesOptionalType: Bool {
     switch version {
     case .string: return false
-    case let .semVar(_, usesOptionalType): return usesOptionalType
+    case let .semvar(_, usesOptionalType): return usesOptionalType
     }
   }
 
   public enum Version: Sendable {
     case string(String)
-    case semVar(SemVar, usesOptionalType: Bool = true)
+    case semvar(SemVar, usesOptionalType: Bool = true)
 
     func string(allowPreReleaseTag: Bool) throws -> String {
       switch self {
       case let .string(string):
         return string
-      case let .semVar(semVar, usesOptionalType: _):
-        return semVar.versionString(withPreReleaseTag: allowPreReleaseTag)
+      case let .semvar(semvar, usesOptionalType: _):
+        return semvar.versionString(withPreReleaseTag: allowPreReleaseTag)
       }
     }
   }
@@ -131,14 +131,18 @@ extension CliClient.SharedOptions {
       @Dependency(\.logger) var logger
 
       switch container.version {
-      case .string: // When we did not parse a semVar, just write whatever we parsed for the current version.
+      case .string: // When we did not parse a semvar, just write whatever we parsed for the current version.
         logger.debug("Failed to parse semvar, but got current version string.")
         try await write(container)
 
-      case let .semVar(semVar, usesOptionalType: usesOptionalType):
-        logger.debug("Semvar prior to bumping: \(semVar)")
-        let bumped = semVar.bump(type, preRelease: nil) // preRelease is already set on semVar.
+      case let .semvar(semvar, usesOptionalType: usesOptionalType):
+        logger.debug("Semvar prior to bumping: \(semvar)")
+        let bumped = semvar.bump(type)
         let version = bumped.versionString(withPreReleaseTag: allowPreReleaseTag)
+        guard bumped != semvar else {
+          logger.debug("No change, skipping.")
+          return
+        }
         logger.debug("Bumped version: \(version)")
         let template = usesOptionalType ? Template.optional(version) : Template.build(version)
         try await write(template, to: container.targetUrl)

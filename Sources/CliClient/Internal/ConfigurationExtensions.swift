@@ -128,15 +128,15 @@ extension Configuration.PreRelease {
 @_spi(Internal)
 public extension Configuration.SemVar {
 
-  private func applyingPreRelease(_ semVar: SemVar, _ gitDirectory: String?) async throws -> SemVar {
+  private func applyingPreRelease(_ semvar: SemVar, _ gitDirectory: String?) async throws -> SemVar {
     @Dependency(\.logger) var logger
-    logger.trace("Start apply pre-release to: \(semVar)")
+    logger.trace("Start apply pre-release to: \(semvar)")
 
     guard let preReleaseStrategy = self.preRelease,
           let preRelease = try await preReleaseStrategy.preReleaseString(gitDirectory: gitDirectory)
     else {
       logger.trace("No pre-release strategy, returning original semvar.")
-      return semVar
+      return semvar
     }
 
     // let preRelease = try await preReleaseStrategy.preReleaseString(gitDirectory: gitDirectory)
@@ -144,7 +144,7 @@ public extension Configuration.SemVar {
 
     switch preRelease {
     case let .suffix(string):
-      return semVar.applyingPreRelease(string)
+      return semvar.applyingPreRelease(string)
     case let .semvar(string):
       guard let semvar = SemVar(string: string) else {
         throw CliClientError.preReleaseParsingError(string)
@@ -160,7 +160,7 @@ public extension Configuration.SemVar {
     @Dependency(\.gitClient) var gitClient
     @Dependency(\.logger) var logger
 
-    let fileOutput = try? await fileClient.semVar(file: file, gitDirectory: gitDirectory)
+    let fileOutput = try? await fileClient.semvar(file: file, gitDirectory: gitDirectory)
     var semVar = fileOutput?.semVar
 
     logger.trace("file output semvar: \(String(describing: semVar))")
@@ -169,7 +169,7 @@ public extension Configuration.SemVar {
 
     // We parsed a semvar from the existing file, use it.
     if semVar != nil {
-      return try await .semVar(
+      return try await .semvar(
         applyingPreRelease(semVar!, gitDirectory),
         usesOptionalType: usesOptionalType ?? false
       )
@@ -189,7 +189,7 @@ public extension Configuration.SemVar {
     )).semVar
 
     if semVar != nil {
-      return try await .semVar(
+      return try await .semvar(
         applyingPreRelease(semVar!, gitDirectory),
         usesOptionalType: usesOptionalType ?? false
       )
@@ -202,7 +202,7 @@ public extension Configuration.SemVar {
 
     // Semvar doesn't exist, so create a new one.
     logger.trace("Generating new semvar.")
-    return try await .semVar(
+    return try await .semvar(
       applyingPreRelease(.init(), gitDirectory),
       usesOptionalType: usesOptionalType ?? false
     )
