@@ -82,7 +82,7 @@ public extension CliClient.SharedOptions {
       try await fileClient.write(string: string, to: url)
     } else {
       logger.debug("Skipping, due to dry-run being passed.")
-      logger.debug("\n\(string)\n")
+      logger.info("\n\(string)\n")
     }
   }
 
@@ -108,19 +108,19 @@ public struct CurrentVersionContainer: Sendable {
   var usesOptionalType: Bool {
     switch version {
     case .string: return false
-    case let .semvar(_, usesOptionalType): return usesOptionalType
+    case let .semvar(_, usesOptionalType, _): return usesOptionalType
     }
   }
 
   public enum Version: Sendable {
     case string(String)
-    case semvar(SemVar, usesOptionalType: Bool = true)
+    case semvar(SemVar, usesOptionalType: Bool = true, hasChanges: Bool)
 
     func string(allowPreReleaseTag: Bool) throws -> String {
       switch self {
       case let .string(string):
         return string
-      case let .semvar(semvar, usesOptionalType: _):
+      case let .semvar(semvar, usesOptionalType: _, hasChanges: _):
         return semvar.versionString(withPreReleaseTag: allowPreReleaseTag)
       }
     }
@@ -149,14 +149,17 @@ extension CliClient.SharedOptions {
         logger.debug("Failed to parse semvar, but got current version string.")
         try await write(container)
 
-      case let .semvar(semvar, usesOptionalType: usesOptionalType):
+      case let .semvar(semvar, usesOptionalType: usesOptionalType, hasChanges: hasChanges):
         logger.debug("Semvar prior to bumping: \(semvar)")
         let bumped = semvar.bump(type)
         let version = bumped.versionString(withPreReleaseTag: allowPreReleaseTag)
-        guard bumped != semvar else {
+
+        // TODO: This doesn't work as expected w/o checking what the loaded semvar in the file is / was.
+        guard bumped != semvar || hasChanges else {
           logger.debug("No change, skipping.")
           return
         }
+
         logger.debug("Bumped version: \(version)")
         let template = usesOptionalType ? Template.optional(version) : Template.build(version)
         try await write(template, to: container.targetUrl)

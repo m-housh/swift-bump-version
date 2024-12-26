@@ -169,9 +169,12 @@ public extension Configuration.SemVar {
 
     // We parsed a semvar from the existing file, use it.
     if semVar != nil {
-      return try await .semvar(
-        applyingPreRelease(semVar!, gitDirectory),
-        usesOptionalType: usesOptionalType ?? false
+      let semvarWithPreRelease = try await applyingPreRelease(semVar!, gitDirectory)
+
+      return .semvar(
+        semvarWithPreRelease,
+        usesOptionalType: usesOptionalType ?? false,
+        hasChanges: semvarWithPreRelease != semVar
       )
     }
 
@@ -189,9 +192,11 @@ public extension Configuration.SemVar {
     )).semVar
 
     if semVar != nil {
-      return try await .semvar(
-        applyingPreRelease(semVar!, gitDirectory),
-        usesOptionalType: usesOptionalType ?? false
+      let semvarWithPreRelease = try await applyingPreRelease(semVar!, gitDirectory)
+      return .semvar(
+        semvarWithPreRelease,
+        usesOptionalType: usesOptionalType ?? false,
+        hasChanges: semvarWithPreRelease != semVar
       )
     }
 
@@ -204,7 +209,8 @@ public extension Configuration.SemVar {
     logger.trace("Generating new semvar.")
     return try await .semvar(
       applyingPreRelease(.init(), gitDirectory),
-      usesOptionalType: usesOptionalType ?? false
+      usesOptionalType: usesOptionalType ?? false,
+      hasChanges: true
     )
   }
 }

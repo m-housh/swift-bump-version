@@ -5,14 +5,18 @@ import Dependencies
 import Foundation
 import ShellClient
 
-struct GenerateCommand: AsyncParsableCommand {
+struct GenerateCommand: CommandRepresentable {
   static let commandName = "generate"
 
   static let configuration: CommandConfiguration = .init(
     commandName: Self.commandName,
-    abstract: Abstract.default("Generates a version file in your project.").render(),
+    abstract: Abstract.default("Generates a version file in your project."),
     usage: Usage.default(commandName: Self.commandName),
-    discussion: Discussion {
+    discussion: Discussion.default(
+      examples: [
+        makeExample(label: "Basic usage.", example: "")
+      ]
+    ) {
       "This command can be interacted with directly, outside of the plugin usage context."
     }
   )

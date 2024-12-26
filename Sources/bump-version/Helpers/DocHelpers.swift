@@ -1,3 +1,7 @@
+/*
+ This file contains helpers for generating the documentation for the commands.
+
+ */
 import ArgumentParser
 import CliDoc
 import Rainbow

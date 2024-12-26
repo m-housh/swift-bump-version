@@ -7,7 +7,7 @@ public extension Logger.Level {
     switch verbose {
     case 1: self = .debug
     case 2...: self = .trace
-    default: self = .warning
+    default: self = .info
     }
   }
 }

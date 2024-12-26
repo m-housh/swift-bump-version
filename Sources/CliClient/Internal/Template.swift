@@ -13,6 +13,7 @@ public struct Template: Sendable {
     return """
     // Do not set this variable, it is set during the build process.
     let VERSION: \(type.rawValue) = \(versionString)
+
     """
   }
 
