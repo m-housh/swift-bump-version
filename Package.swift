@@ -15,8 +15,7 @@ let package = Package(
     .library(name: "GitClient", targets: ["GitClient"]),
     .library(name: "LoggingExtensions", targets: ["LoggingExtensions"]),
     .plugin(name: "BuildWithVersionPlugin", targets: ["BuildWithVersionPlugin"]),
-    .plugin(name: "GenerateVersionPlugin", targets: ["GenerateVersionPlugin"]),
-    .plugin(name: "UpdateVersionPlugin", targets: ["UpdateVersionPlugin"])
+    .plugin(name: "BumpVersionPlugin", targets: ["BumpVersionPlugin"])
   ],
   dependencies: [
     .package(url: "https://github.com/pointfreeco/swift-dependencies.git", from: "1.6.2"),
@@ -101,26 +100,11 @@ let package = Package(
       ]
     ),
     .plugin(
-      name: "GenerateVersionPlugin",
+      name: "BumpVersionPlugin",
       capability: .command(
         intent: .custom(
-          verb: "generate-version",
-          description: "Generates a version file in the given target."
-        ),
-        permissions: [
-          .writeToPackageDirectory(reason: "Generate a version file in the target's directory.")
-        ]
-      ),
-      dependencies: [
-        "bump-version"
-      ]
-    ),
-    .plugin(
-      name: "UpdateVersionPlugin",
-      capability: .command(
-        intent: .custom(
-          verb: "update-version",
-          description: "Updates a version file in the given target."
+          verb: "bump-version",
+          description: "Bumps a version file in the given target."
         ),
         permissions: [
           .writeToPackageDirectory(reason: "Update a version file in the target's directory.")

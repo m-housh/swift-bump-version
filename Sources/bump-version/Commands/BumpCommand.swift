@@ -14,13 +14,11 @@ struct BumpCommand: CommandRepresentable {
     discussion: Discussion.default(examples: [
       makeExample(
         label: "Basic usage, bump the minor version.",
-        example: "--minor",
-        includesAppName: false
+        example: "--minor"
       ),
       makeExample(
         label: "Dry run, just show what the bumped version would be.",
-        example: "--minor --dry-run",
-        includesAppName: false
+        example: "--minor --dry-run"
       )
     ])
   )

@@ -13,7 +13,7 @@ struct GenerateVersionBuildPlugin: BuildToolPlugin {
       .deletingLastPathComponent()
       .deletingLastPathComponent()
 
-    let tool = try context.tool(named: "cli-version")
+    let tool = try context.tool(named: "bump-version")
     let outputPath = context.pluginWorkDirectoryURL
 
     let outputFile = outputPath.appending(path: "Version.swift")
@@ -25,7 +25,7 @@ struct GenerateVersionBuildPlugin: BuildToolPlugin {
         arguments: [
           "build", "--verbose",
           "--git-directory", gitDirectoryPath.absoluteString,
-          "--target", outputPath.absoluteString
+          "--target-file-path", outputPath.absoluteString
         ],
         environment: [:],
         inputFiles: target.sourceFiles.map(\.url),
