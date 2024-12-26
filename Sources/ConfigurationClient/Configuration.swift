@@ -1,6 +1,8 @@
 import CustomDump
 import Foundation
 
+// TODO: Add pre-release strategy that just bumps an integer.
+
 /// Represents configuration that can be set via a file, generally in the root of the
 /// project directory.
 ///

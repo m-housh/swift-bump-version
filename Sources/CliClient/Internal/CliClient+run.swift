@@ -154,7 +154,6 @@ extension CliClient.SharedOptions {
         let bumped = semvar.bump(type)
         let version = bumped.versionString(withPreReleaseTag: allowPreReleaseTag)
 
-        // TODO: This doesn't work as expected w/o checking what the loaded semvar in the file is / was.
         guard bumped != semvar || hasChanges else {
           logger.debug("No change, skipping.")
           return
