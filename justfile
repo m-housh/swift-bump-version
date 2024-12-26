@@ -5,7 +5,8 @@ docker_tag := "test"
 tap_url := "https://git.housh.dev/michael/homebrew-formula"
 tap := "michael/formula"
 formula := "bump-version"
-release_base_url := "https://git.housh.dev/michael/bump-version/archive"
+release_base_url := "https://git.housh.dev/michael/swift-bump-version/archive"
+version := "$(git describe --tags --exact-match)"
 
 [private]
 default:
@@ -26,7 +27,8 @@ build configuration="debug":
     --configuration {{configuration}} \
     --product {{product}}
 
-alias b := build
+# Bump our version of the command-line tool.
+bump-version *ARGS: (run "bump" ARGS)
 
 # Build a docker image.
 build-docker configuration="debug":
@@ -43,7 +45,9 @@ clean:
 # Clean and build.
 clean-build configuration="debug": clean (build configuration)
 
-alias cb := clean-build
+# Remove bottles
+remove-bottles:
+  rm -rf *.gz
 
 # Test locally.
 test *ARGS:
@@ -53,13 +57,17 @@ test *ARGS:
 test-docker: build-docker
   @docker run --rm {{docker_image}}:{{docker_tag}}
 
+# Run tests in docker without building a new image.
 test-docker-without-building:
   @docker run --rm {{docker_image}}:{{docker_tag}} swift test
 
+# Show the current git-tag version.
+echo-version:
+  @echo "VERSION: {{version}}"
+
 # Get the sha256 sum of the release and copy to clipboard.
 get-release-sha prefix="": (build "release")
-  version=$(.build/release/hpa --version) && \
-    url="{{release_base_url}}/{{prefix}}${version}.tar.gz" && \
+  url="{{release_base_url}}/{{prefix}}${version}.tar.gz" && \
     sha=$(curl "$url" | shasum -a 256) && \
     stripped="${sha% *}" && \
     echo "$stripped" | pbcopy && \
