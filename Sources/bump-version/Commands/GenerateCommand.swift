@@ -1,5 +1,6 @@
 import ArgumentParser
 import CliClient
+import CliDoc
 import Dependencies
 import Foundation
 import ShellClient
@@ -9,8 +10,11 @@ struct GenerateCommand: AsyncParsableCommand {
 
   static let configuration: CommandConfiguration = .init(
     commandName: Self.commandName,
-    abstract: "Generates a version file in a command line tool that can be set via the git tag or git sha.",
-    discussion: "This command can be interacted with directly, outside of the plugin usage context."
+    abstract: Abstract.default("Generates a version file in your project.").render(),
+    usage: Usage.default(commandName: Self.commandName),
+    discussion: Discussion {
+      "This command can be interacted with directly, outside of the plugin usage context."
+    }
   )
 
   @OptionGroup var globals: GlobalOptions

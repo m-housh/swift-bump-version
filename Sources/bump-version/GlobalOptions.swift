@@ -5,6 +5,8 @@ import Dependencies
 import Foundation
 import Rainbow
 
+// TODO: Add an option to not load project configuration.
+
 struct GlobalOptions: ParsableArguments {
 
   @OptionGroup
@@ -41,7 +43,7 @@ struct GlobalOptions: ParsableArguments {
 struct ConfigurationOptions: ParsableArguments {
   @Option(
     name: [.customShort("f"), .long],
-    help: "Specify the path to a configuration file.",
+    help: "Specify the path to a configuration file. (default: .bump-version.json)",
     completion: .file(extensions: ["json"])
   )
   var configurationFile: String?

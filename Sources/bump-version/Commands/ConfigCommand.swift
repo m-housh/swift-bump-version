@@ -1,5 +1,6 @@
 import ArgumentParser
 import CliClient
+import CliDoc
 import ConfigurationClient
 import CustomDump
 import Dependencies
@@ -7,9 +8,11 @@ import FileClient
 import Foundation
 
 struct ConfigCommand: AsyncParsableCommand {
+  static let commandName = "config"
+
   static let configuration = CommandConfiguration(
-    commandName: "config",
-    abstract: "Configuration commands",
+    commandName: commandName,
+    abstract: Abstract.default("Configuration commands").render(),
     subcommands: [
       DumpConfig.self,
       GenerateConfig.self
@@ -19,19 +22,40 @@ struct ConfigCommand: AsyncParsableCommand {
 
 extension ConfigCommand {
 
-  struct DumpConfig: AsyncParsableCommand {
+  struct DumpConfig: CommandRepresentable {
     static let commandName = "dump"
+    static let parentCommand = ConfigCommand.commandName
 
     static let configuration = CommandConfiguration(
       commandName: Self.commandName,
-      abstract: "Inspect the parsed configuration.",
-      discussion: """
-      This will load any configuration and merge the options passed in. Then print it to stdout.
-      The default style is to print the output in `swift`, however you can use the `--print` flag to
-      print the output in `json`.
-      """,
+      abstract: Abstract.default("Inspect the parsed configuration."),
+      usage: Usage.default(parentCommand: ConfigCommand.commandName, commandName: Self.commandName),
+      discussion: Discussion.default(
+        notes: [
+          """
+          The default style is to print the output in `json`, however you can use the `--swift` flag to
+          print the output in `swift`.
+          """
+        ],
+        examples: [
+          makeExample(label: "Show the project configuration.", example: ""),
+          makeExample(
+            label: "Update a configuration file with the dumped output",
+            example: "--disable-pre-release > .bump-version.prod.json"
+          )
+        ]
+      ) {
+        """
+        Loads the project configuration file (if applicable) and merges the options passed in,
+        then prints the configuration to stdout.
+        """
+      },
       aliases: ["d"]
     )
+    @Flag(
+      help: "Change the style of what get's printed."
+    )
+    fileprivate var printStyle: PrintStyle = .json
 
     @OptionGroup var globals: ConfigCommandOptions
 
@@ -40,14 +64,28 @@ extension ConfigCommand {
         .shared(command: Self.commandName)
         .runClient(\.parsedConfiguration)
 
-      try globals.printConfiguration(configuration)
+      try globals.printConfiguration(configuration, style: printStyle)
     }
   }
 
-  struct GenerateConfig: AsyncParsableCommand {
+  struct GenerateConfig: CommandRepresentable {
+    static let commandName = "generate"
+    static let parentCommand = ConfigCommand.commandName
+
     static let configuration: CommandConfiguration = .init(
-      commandName: "generate",
-      abstract: "Generate a configuration file.",
+      commandName: commandName,
+      abstract: Abstract.default("Generate a configuration file, based on the given options.").render(),
+      usage: Usage.default(parentCommand: ConfigCommand.commandName, commandName: commandName),
+      discussion: Discussion.default(examples: [
+        makeExample(
+          label: "Generate a configuration file for the 'foo' target.",
+          example: "-m foo"
+        ),
+        makeExample(
+          label: "Show the output and don't write to a file.",
+          example: "-m foo --print"
+        )
+      ]),
       aliases: ["g"]
     )
 
@@ -55,6 +93,12 @@ extension ConfigCommand {
       help: "The style of the configuration."
     )
     var style: ConfigCommand.Style = .semvar
+
+    @Flag(
+      name: .customLong("print"),
+      help: "Print json to stdout."
+    )
+    var printJson: Bool = false
 
     @OptionGroup var globals: ConfigCommandOptions
 
@@ -67,7 +111,7 @@ extension ConfigCommand {
           extraOptions: globals.extraOptions
         )
 
-        switch globals.printJson {
+        switch printJson {
         case true:
           try globals.handlePrintJson(configuration)
         case false:
@@ -109,13 +153,13 @@ extension ConfigCommand {
   @dynamicMemberLookup
   struct ConfigCommandOptions: ParsableArguments {
 
-    @Flag(
-      name: .customLong("print"),
-      help: "Print style to stdout."
-    )
-    var printJson: Bool = false
-
     @OptionGroup var configOptions: ConfigurationOptions
+
+    @Flag(
+      name: .shortAndLong,
+      help: "Increase logging level, can be passed multiple times (example: -vvv)."
+    )
+    var verbose: Int
 
     @Argument(
       help: """
@@ -131,10 +175,16 @@ extension ConfigCommand {
   }
 }
 
+private extension ConfigCommand.DumpConfig {
+  enum PrintStyle: EnumerableFlag {
+    case json, swift
+  }
+}
+
 private extension ConfigCommand.ConfigCommandOptions {
 
   func shared(command: String) throws -> CliClient.SharedOptions {
-    try configOptions.shared(command: command, extraOptions: extraOptions, verbose: 2)
+    try configOptions.shared(command: command, extraOptions: extraOptions, verbose: verbose)
   }
 
   func handlePrintJson(_ configuration: Configuration) throws {
@@ -149,12 +199,22 @@ private extension ConfigCommand.ConfigCommandOptions {
     print(string)
   }
 
-  func printConfiguration(_ configuration: Configuration) throws {
-    guard printJson else {
+  func printConfiguration(
+    _ configuration: Configuration,
+    style: ConfigCommand.DumpConfig.PrintStyle
+  ) throws {
+    switch style {
+    case .json:
+      try handlePrintJson(configuration)
+    case .swift:
       customDump(configuration)
-      return
     }
-    try handlePrintJson(configuration)
+
+    // guard printJson else {
+    //   customDump(configuration)
+    //   return
+    // }
+    // try handlePrintJson(configuration)
   }
 }
 

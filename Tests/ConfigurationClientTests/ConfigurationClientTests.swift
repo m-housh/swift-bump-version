@@ -1,4 +1,4 @@
-import ConfigurationClient
+@_spi(Internal) import ConfigurationClient
 import Dependencies
 import Foundation
 import Testing
@@ -72,6 +72,64 @@ struct ConfigurationClientTests {
         }
       }
     }
+  }
+
+  @Test
+  func mergingBranch() {
+    let branch = Configuration.Branch(includeCommitSha: false)
+    let branch2 = Configuration.Branch(includeCommitSha: true)
+    let merged = branch.merging(branch2)
+    #expect(merged == branch2)
+
+    let merged2 = branch.merging(nil)
+    #expect(merged2 == branch)
+  }
+
+  @Test
+  func mergingSemvar() {
+    let strategy1 = Configuration.VersionStrategy.semvar(.init())
+    let other = Configuration.VersionStrategy.semvar(.init(
+      allowPreRelease: true,
+      preRelease: .init(prefix: "foo", strategy: .gitTag),
+      requireExistingFile: true,
+      requireExistingSemVar: true,
+      strategy: .gitTag()
+    ))
+    let merged = strategy1.merging(other)
+    #expect(merged == other)
+
+    let otherMerged = other.merging(strategy1)
+    #expect(otherMerged == other)
+  }
+
+  @Test
+  func mergingTarget() {
+    let config1 = Configuration(target: .init(path: "foo"))
+    let config2 = Configuration(target: .init(module: .init("bar")))
+
+    let merged = config1.merging(config2)
+    #expect(merged.target! == .init(module: .init("bar")))
+
+    let merged2 = merged.merging(config1)
+    #expect(merged2.target! == .init(path: "foo"))
+
+    let merged3 = merged2.merging(nil)
+    #expect(merged3 == merged2)
+  }
+
+  @Test
+  func mergingVersionStrategy() {
+    let version = Configuration.VersionStrategy.semvar(.init())
+    let version2 = Configuration.VersionStrategy.branch(.init())
+
+    let merged = version.merging(version2)
+    #expect(merged == version2)
+
+    let merged2 = merged.merging(.branch(includeCommitSha: false))
+    #expect(merged2.branch!.includeCommitSha == false)
+
+    let merged3 = version2.merging(version)
+    #expect(merged3 == version)
   }
 
   func run(

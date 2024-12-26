@@ -1,14 +1,28 @@
 import ArgumentParser
 import CliClient
+import CliDoc
 import Dependencies
 
-struct BumpCommand: AsyncParsableCommand {
+struct BumpCommand: CommandRepresentable {
 
   static let commandName = "bump"
 
   static let configuration = CommandConfiguration(
     commandName: Self.commandName,
-    abstract: "Bump version of a command-line tool."
+    abstract: Abstract.default("Bump version of a command-line tool."),
+    usage: Usage.default(commandName: nil),
+    discussion: Discussion.default(examples: [
+      makeExample(
+        label: "Basic usage, bump the minor version.",
+        example: "--minor",
+        includesAppName: false
+      ),
+      makeExample(
+        label: "Dry run, just show what the bumped version would be.",
+        example: "--minor --dry-run",
+        includesAppName: false
+      )
+    ])
   )
 
   @OptionGroup var globals: GlobalOptions

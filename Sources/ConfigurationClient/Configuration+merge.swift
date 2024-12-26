@@ -1,7 +1,6 @@
 import Dependencies
 import FileClient
 import Foundation
-import ShellClient
 
 @_spi(Internal)
 public extension Configuration {
@@ -58,19 +57,15 @@ public extension Configuration.SemVar {
 @_spi(Internal)
 public extension Configuration.VersionStrategy {
   func merging(_ other: Self?) -> Self {
-    if let otherBranch = other?.branch {
-      guard let branch else {
-        return .branch(otherBranch)
-      }
-      return .branch(branch.merging(otherBranch))
-    }
+    guard let other else { return self }
 
-    guard let branch else {
-      guard let semvar else {
-        return other ?? self
-      }
-      return .semvar(semvar.merging(other?.semvar))
+    switch other {
+    case .branch:
+      guard let branch else { return other }
+      return .branch(branch.merging(other.branch))
+    case .semvar:
+      guard let semvar else { return other }
+      return .semvar(semvar.merging(other.semvar))
     }
-    return .branch(branch.merging(other?.branch))
   }
 }

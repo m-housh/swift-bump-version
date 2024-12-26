@@ -167,7 +167,6 @@ extension ConfigurationOptions {
     )
   }
 
-  // TODO: Need to potentially do something different with passing branch.
   func shared(
     command: String,
     dryRun: Bool = true,

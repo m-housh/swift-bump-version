@@ -3,8 +3,10 @@ import Foundation
 
 @main
 struct Application: AsyncParsableCommand {
+  static let commandName = "bump-version"
+
   static let configuration: CommandConfiguration = .init(
-    commandName: "bump-version",
+    commandName: commandName,
     version: VERSION ?? "0.0.0",
     subcommands: [
       BuildCommand.self,
