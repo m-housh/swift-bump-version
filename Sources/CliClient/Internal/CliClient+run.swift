@@ -47,18 +47,32 @@ public extension CliClient.SharedOptions {
   func withMergedConfiguration<T>(
     operation: (Configuration) async throws -> T
   ) async throws -> T {
-    try await withConfiguration(path: configurationFile) { configuration in
-      var configuration = configuration
-      configuration = configuration.mergingTarget(target)
+    @Dependency(\.configurationClient) var configurationClient
+    @Dependency(\.logger) var logger
 
-      if configuration.strategy?.branch != nil, let branch {
-        configuration = configuration.mergingStrategy(.branch(branch))
-      } else if let semvar {
-        configuration = configuration.mergingStrategy(.semvar(semvar))
-      }
+    var strategy: Configuration.VersionStrategy?
 
-      return try await operation(configuration)
+    if let branch {
+      logger.trace("Merging branch strategy.")
+      strategy = .branch(branch)
+    } else if let semvar {
+      logger.trace("Merging semvar strategy.")
+      var semvarString = ""
+      customDump(semvar, to: &semvarString)
+      logger.trace("\(semvarString)")
+      strategy = .semvar(semvar)
     }
+
+    let configuration = Configuration(
+      target: target,
+      strategy: strategy
+    )
+
+    return try await configurationClient.withConfiguration(
+      path: configurationFile,
+      merging: configuration,
+      operation: operation
+    )
   }
 
   func write(_ string: String, to url: URL) async throws {

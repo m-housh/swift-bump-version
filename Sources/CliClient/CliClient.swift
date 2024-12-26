@@ -4,6 +4,7 @@ import DependenciesMacros
 import FileClient
 import Foundation
 import GitClient
+import LoggingExtensions
 import ShellClient
 
 public extension DependencyValues {
@@ -32,24 +33,6 @@ public struct CliClient: Sendable {
 
   public enum BumpOption: Sendable, CaseIterable {
     case major, minor, patch, preRelease
-  }
-
-  // TODO: Need a quiet option, as default log level is warning, need a way to set it to ignore logs.
-  public struct LoggingOptions: Equatable, Sendable {
-
-    let command: String
-    let executableName: String
-    let verbose: Int
-
-    public init(
-      executableName: String = "bump-version",
-      command: String,
-      verbose: Int
-    ) {
-      self.executableName = executableName
-      self.command = command
-      self.verbose = verbose
-    }
   }
 
   public struct SharedOptions: Equatable, Sendable {
@@ -95,7 +78,9 @@ extension CliClient: DependencyKey {
       bump: { try await $1.bump($0) },
       generate: { try await $0.generate() },
       parsedConfiguration: { options in
-        try await options.withMergedConfiguration { $0 }
+        try await options.loggingOptions.withLogger {
+          try await options.withMergedConfiguration { $0 }
+        }
       }
     )
   }

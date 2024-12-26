@@ -16,6 +16,9 @@ public extension DependencyValues {
 @DependencyClient
 public struct ConfigurationClient: Sendable {
 
+  /// The default file name for a configuration file.
+  public var defaultFileName: @Sendable () -> String = { "test.json" }
+
   /// Find a configuration file in the given directory or in current working directory.
   public var find: @Sendable (URL?) async throws -> URL?
 
@@ -32,6 +35,25 @@ public struct ConfigurationClient: Sendable {
     }
     return (try? await load(url)) ?? .default
   }
+
+  /// Loads configuration from the given path, or searches for the default file and loads it.
+  /// Optionally merges other configuration, then perform an operation with the loaded configuration.
+  ///
+  /// - Parameters:
+  ///   - path: Optional file path of the configuration to load.
+  ///   - other: Optional configuration to merge with the loaded configuration.
+  ///   - operation: The operation to perform with the loaded configuration.
+  @discardableResult
+  public func withConfiguration<T>(
+    path: String?,
+    merging other: Configuration? = nil,
+    operation: (Configuration) async throws -> T
+  ) async throws -> T {
+    let configuration = try await findAndLoad(
+      path != nil ? URL(filePath: path!) : nil
+    )
+    return try await operation(configuration.merging(other))
+  }
 }
 
 extension ConfigurationClient: DependencyKey {
@@ -39,6 +61,7 @@ extension ConfigurationClient: DependencyKey {
 
   public static var liveValue: ConfigurationClient {
     .init(
+      defaultFileName: { "\(Constants.defaultFileNameWithoutExtension).json" },
       find: { try await findConfiguration($0) },
       load: { try await loadConfiguration($0) },
       write: { try await writeConfiguration($0, to: $1) }

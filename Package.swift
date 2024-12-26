@@ -13,6 +13,7 @@ let package = Package(
     .library(name: "ConfigurationClient", targets: ["ConfigurationClient"]),
     .library(name: "FileClient", targets: ["FileClient"]),
     .library(name: "GitClient", targets: ["GitClient"]),
+    .library(name: "LoggingExtensions", targets: ["LoggingExtensions"]),
     .plugin(name: "BuildWithVersionPlugin", targets: ["BuildWithVersionPlugin"]),
     .plugin(name: "GenerateVersionPlugin", targets: ["GenerateVersionPlugin"]),
     .plugin(name: "UpdateVersionPlugin", targets: ["UpdateVersionPlugin"])
@@ -40,6 +41,7 @@ let package = Package(
         "ConfigurationClient",
         "FileClient",
         "GitClient",
+        "LoggingExtensions",
         .product(name: "Logging", package: "swift-log"),
         .product(name: "CustomDump", package: "swift-custom-dump")
       ]
@@ -80,6 +82,13 @@ let package = Package(
     .testTarget(
       name: "GitClientTests",
       dependencies: ["GitClient"]
+    ),
+    .target(
+      name: "LoggingExtensions",
+      dependencies: [
+        .product(name: "Dependencies", package: "swift-dependencies"),
+        .product(name: "ShellClient", package: "swift-shell-client")
+      ]
     ),
     .target(name: "TestSupport"),
     .plugin(

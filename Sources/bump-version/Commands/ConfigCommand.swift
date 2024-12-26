@@ -105,6 +105,7 @@ extension ConfigCommand {
     }
   }
 
+  // TODO: Add verbose.
   @dynamicMemberLookup
   struct ConfigCommandOptions: ParsableArguments {
 
@@ -133,7 +134,7 @@ extension ConfigCommand {
 private extension ConfigCommand.ConfigCommandOptions {
 
   func shared(command: String) throws -> CliClient.SharedOptions {
-    try configOptions.shared(command: command, extraOptions: extraOptions)
+    try configOptions.shared(command: command, extraOptions: extraOptions, verbose: 2)
   }
 
   func handlePrintJson(_ configuration: Configuration) throws {

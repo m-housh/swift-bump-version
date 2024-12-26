@@ -167,6 +167,7 @@ extension ConfigurationOptions {
     )
   }
 
+  // TODO: Need to potentially do something different with passing branch.
   func shared(
     command: String,
     dryRun: Bool = true,
@@ -180,7 +181,7 @@ extension ConfigurationOptions {
       gitDirectory: gitDirectory,
       loggingOptions: .init(command: command, verbose: verbose),
       target: target(),
-      branch: .init(includeCommitSha: commitSha),
+      branch: semvarOptions.gitTag ? nil : .init(includeCommitSha: commitSha),
       semvar: semvarOptions(extraOptions: extraOptions),
       configurationFile: configurationFile
     )

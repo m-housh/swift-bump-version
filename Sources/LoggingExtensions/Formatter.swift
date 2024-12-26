@@ -5,27 +5,19 @@ import LoggingFormatAndPipe
 import Rainbow
 import ShellClient
 
+// MARK: Custom colors.
+
 extension String {
   var orange: Self {
     bit24(255, 165, 0)
   }
 
-  var magena: Self {
-    // bit24(186, 85, 211)
+  var magenta: Self {
     bit24(238, 130, 238)
   }
 }
 
-@_spi(Internal)
-public extension Logger.Level {
-
-  init(verbose: Int) {
-    switch verbose {
-    case 1: self = .debug
-    case 2...: self = .trace
-    default: self = .warning
-    }
-  }
+extension Logger.Level {
 
   var coloredString: String {
     switch self {
@@ -45,7 +37,7 @@ public extension Logger.Level {
   }
 }
 
-struct LevelFormatter: LoggingFormatAndPipe.Formatter {
+private struct LevelFormatter: LoggingFormatAndPipe.Formatter {
 
   let basic: BasicFormatter
 
@@ -138,11 +130,11 @@ struct LevelFormatter: LoggingFormatAndPipe.Formatter {
 
 }
 
-extension CliClient.LoggingOptions {
+extension LoggingOptions {
 
   func makeLogger() -> Logger {
     let formatters: [LogComponent] = [
-      .text(executableName.magena),
+      .text(executableName.magenta),
       .text(command.blue),
       .level,
       .group([
@@ -161,12 +153,4 @@ extension CliClient.LoggingOptions {
     }
   }
 
-  func withLogger<T>(_ operation: () async throws -> T) async rethrows -> T {
-    try await withDependencies {
-      $0.logger = makeLogger()
-      $0.logger.logLevel = .init(verbose: verbose)
-    } operation: {
-      try await operation()
-    }
-  }
 }
