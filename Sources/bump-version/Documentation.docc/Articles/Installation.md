@@ -1,3 +1,0 @@
-# Installation
-
-You can install the command-line application by...

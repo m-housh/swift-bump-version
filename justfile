@@ -72,3 +72,21 @@ get-release-sha prefix="": (build "release")
     stripped="${sha% *}" && \
     echo "$stripped" | pbcopy && \
     echo "Copied sha to clipboard: $stripped"
+
+# Preview the documentation locally.
+preview-documentation target="BumpVersion":
+	swift package \
+		--disable-sandbox \
+		preview-documentation \
+		--target {{target}}
+
+# Preview the documentation locally.
+build-documentation dir="./docs" target="BumpVersion" basePath="bump-version":
+	swift package \
+		--allow-writing-to-directory {{dir}} \
+		generate-documentation \
+		--target {{target}} \
+		--disable-indexing \
+		--transform-for-static-hosting \
+		--hosting-base-path {{basePath}} \
+		--output-path {{dir}}

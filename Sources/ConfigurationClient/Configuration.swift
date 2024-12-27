@@ -117,8 +117,8 @@ public extension Configuration {
     public init(
       allowPreRelease: Bool? = true,
       preRelease: PreRelease? = nil,
-      requireExistingFile: Bool? = true,
-      requireExistingSemVar: Bool? = true,
+      requireExistingFile: Bool? = false,
+      requireExistingSemVar: Bool? = false,
       strategy: Strategy? = nil
     ) {
       self.allowPreRelease = allowPreRelease

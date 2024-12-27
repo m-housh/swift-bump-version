@@ -1,12 +1,12 @@
 # Manual Plugins
 
-There are two plugins that are included that can be ran manually, if the build tool plugin does not fit
-your use case.
+There are two plugins that are included that can be ran manually, if the build tool plugin does not
+fit your use case.
 
 ## Generate Version
 
-The `generate-version` plugin will create a `Version.swift` file in the given target.  You can
-run it by running the following command.
+The `generate-version` plugin will create a `Version.swift` file in the given target. You can run it
+by running the following command.
 
 ```bash
 swift package --disable-sandbox \
@@ -32,16 +32,17 @@ swift package --disable-sandbox \
 
 ## Options
 
-Both manual versions also allow the following options to customize the operation, the
-options need to come after the plugin name.
+Both manual versions also allow the following options to customize the operation, the options need
+to come after the plugin name.
 
-| Option | Description |
-| ------ | ----------- |
-| --dry-run | Do not write to any files, but describe where values would be written |
-| --filename | Override the file name to be written in the target directory |
-| --verbose | Increase the logging output |
+| Option     | Description                                                           |
+| ---------- | --------------------------------------------------------------------- |
+| --dry-run  | Do not write to any files, but describe where values would be written |
+| --filename | Override the file name to be written in the target directory          |
+| --verbose  | Increase the logging output                                           |
 
 ### Example with options
+
 ```bash
 swift package \
   --allow-writing-to-package-directory \

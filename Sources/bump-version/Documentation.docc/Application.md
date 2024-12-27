@@ -1,5 +1,0 @@
-# Application
-
-## Articles
-
-- <doc:Installation>

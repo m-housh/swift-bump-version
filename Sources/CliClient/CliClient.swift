@@ -9,6 +9,7 @@ import ShellClient
 
 public extension DependencyValues {
 
+  /// The cli-client that runs the command line tool commands.
   var cliClient: CliClient {
     get { self[CliClient.self] }
     set { self[CliClient.self] = newValue }
@@ -70,6 +71,7 @@ public struct CliClient: Sendable {
 }
 
 extension CliClient: DependencyKey {
+
   public static let testValue: CliClient = Self()
 
   public static func live(environment: [String: String]) -> Self {

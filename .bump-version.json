@@ -1,11 +1,15 @@
 {
-  "target" : {
-    "module" : { "name" : "bump-version" }
-  },
   "strategy" : {
     "semvar" : {
-      "preRelease" : { "strategy": { "gitTag" : {} } },
-      "strategy" : { "gitTag": { "exactMatch": false } }
+      "allowPreRelease" : true,
+      "strategy" : {
+        "command" : {
+          "arguments" : [
+            "my-command",
+            "--some-option"
+          ]
+        }
+      }
     }
   }
 }

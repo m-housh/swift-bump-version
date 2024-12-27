@@ -150,6 +150,7 @@ extension ConfigCommand {
   }
 
   // TODO: Add verbose.
+  // TODO: Need to be able to generate a branch style config file.
   @dynamicMemberLookup
   struct ConfigCommandOptions: ParsableArguments {
 

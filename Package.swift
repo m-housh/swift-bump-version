@@ -8,7 +8,7 @@ let package = Package(
     .macOS(.v13)
   ],
   products: [
-    .executable(name: "bump-version", targets: ["bump-version"]),
+    .executable(name: "bump-version", targets: ["BumpVersion"]),
     .library(name: "CliClient", targets: ["CliClient"]),
     .library(name: "ConfigurationClient", targets: ["ConfigurationClient"]),
     .library(name: "FileClient", targets: ["FileClient"]),
@@ -28,7 +28,7 @@ let package = Package(
   ],
   targets: [
     .executableTarget(
-      name: "bump-version",
+      name: "BumpVersion",
       dependencies: [
         "CliClient",
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
@@ -96,7 +96,7 @@ let package = Package(
       name: "BuildWithVersionPlugin",
       capability: .buildTool(),
       dependencies: [
-        "bump-version"
+        "BumpVersion"
       ]
     ),
     .plugin(
@@ -111,7 +111,7 @@ let package = Package(
         ]
       ),
       dependencies: [
-        "bump-version"
+        "BumpVersion"
       ]
     )
   ]
