@@ -37,7 +37,7 @@ to come after the plugin name.
 
 | Option     | Description                                                           |
 | ---------- | --------------------------------------------------------------------- |
-| --dry-run  | Do not write to any files, but describe where values would be written |
+| --print    | Do not write to any files, but describe where values would be written |
 | --filename | Override the file name to be written in the target directory          |
 | --verbose  | Increase the logging output                                           |
 
@@ -47,7 +47,7 @@ to come after the plugin name.
 swift package \
   --allow-writing-to-package-directory \
   generate-version \
-  --dry-run \
+  --print \
   --verbose \
   <target>
 ```

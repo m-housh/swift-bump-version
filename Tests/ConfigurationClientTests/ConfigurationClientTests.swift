@@ -1,4 +1,5 @@
 @_spi(Internal) import ConfigurationClient
+import CustomDump
 import Dependencies
 import Foundation
 import Testing
@@ -91,8 +92,8 @@ struct ConfigurationClientTests {
     let other = Configuration.VersionStrategy.semvar(.init(
       allowPreRelease: true,
       preRelease: .init(prefix: "foo", strategy: .gitTag),
-      requireExistingFile: true,
-      requireExistingSemVar: true,
+      requireExistingFile: false,
+      requireExistingSemVar: false,
       strategy: .gitTag()
     ))
     let merged = strategy1.merging(other)

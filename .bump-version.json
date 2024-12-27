@@ -3,13 +3,15 @@
     "semvar" : {
       "allowPreRelease" : true,
       "strategy" : {
-        "command" : {
-          "arguments" : [
-            "my-command",
-            "--some-option"
-          ]
+        "gitTag" : {
+          "exactMatch" : false
         }
       }
+    }
+  },
+  "target" : {
+    "module" : {
+      "name" : "BumpVersion"
     }
   }
 }

@@ -36,35 +36,46 @@ public struct CliClient: Sendable {
     case major, minor, patch, preRelease
   }
 
+  /// Represents options that are used by all the commands.
   public struct SharedOptions: Equatable, Sendable {
 
+    /// Whether to allow pre-release suffixes.
     let allowPreReleaseTag: Bool
+
+    /// Flag on if we write to files or not.
     let dryRun: Bool
-    let gitDirectory: String?
+
+    /// Specify a path to the project directory.
+    let projectDirectory: String?
+
+    /// The logging options to use.
     let loggingOptions: LoggingOptions
-    let target: Configuration.Target?
-    let branch: Configuration.Branch?
-    let semvar: Configuration.SemVar?
+
+    /// Configuration that gets merged with the loaded (or default) configuration.
+    let configurationToMerge: Configuration?
+
+    /// Path to the configuration file to load.
     let configurationFile: String?
+
+    /// Fail if a configuration file is not found.
+    let requireConfigurationFile: Bool
 
     public init(
       allowPreReleaseTag: Bool = true,
       dryRun: Bool = false,
-      gitDirectory: String? = nil,
+      projectDirectory: String? = nil,
       loggingOptions: LoggingOptions,
-      target: Configuration.Target? = nil,
-      branch: Configuration.Branch? = nil,
-      semvar: Configuration.SemVar? = nil,
-      configurationFile: String? = nil
+      configurationToMerge: Configuration? = nil,
+      configurationFile: String? = nil,
+      requireConfigurationFile: Bool = false
     ) {
       self.allowPreReleaseTag = allowPreReleaseTag
       self.dryRun = dryRun
-      self.gitDirectory = gitDirectory
+      self.projectDirectory = projectDirectory
       self.loggingOptions = loggingOptions
-      self.target = target
-      self.branch = branch
-      self.semvar = semvar
       self.configurationFile = configurationFile
+      self.configurationToMerge = configurationToMerge
+      self.requireConfigurationFile = requireConfigurationFile
     }
   }
 

@@ -64,7 +64,7 @@ extension GlobalOptions {
       command: command,
       dryRun: dryRun,
       extraOptions: extraOptions,
-      gitDirectory: gitDirectory,
+      gitDirectory: projectDirectory,
       verbose: verbose
     )
   }
@@ -129,7 +129,6 @@ extension SemVarOptions {
   ) throws -> Configuration.SemVar {
     @Dependency(\.logger) var logger
 
-    // TODO: Update when / if there's an update config command.
     if customCommand && preRelease.customPreRelease {
       logger.warning("""
       Custom pre-release can not be used at same time as custom command.
@@ -167,6 +166,15 @@ extension ConfigurationOptions {
     )
   }
 
+  private func configurationToMerge(extraOptions: [String]) throws -> Configuration {
+    try .init(
+      target: target(),
+      strategy: semvarOptions.gitTag
+        ? .semvar(semvarOptions(extraOptions: extraOptions))
+        : .branch(includeCommitSha: commitSha)
+    )
+  }
+
   func shared(
     command: String,
     dryRun: Bool = true,
@@ -177,12 +185,11 @@ extension ConfigurationOptions {
     try .init(
       allowPreReleaseTag: !semvarOptions.preRelease.disablePreRelease,
       dryRun: dryRun,
-      gitDirectory: gitDirectory,
+      projectDirectory: gitDirectory,
       loggingOptions: .init(command: command, verbose: verbose),
-      target: target(),
-      branch: semvarOptions.gitTag ? nil : .init(includeCommitSha: commitSha),
-      semvar: semvarOptions(extraOptions: extraOptions),
-      configurationFile: configurationFile
+      configurationToMerge: configurationToMerge(extraOptions: extraOptions),
+      configurationFile: configurationFile,
+      requireConfigurationFile: requireConfiguration
     )
   }
 }

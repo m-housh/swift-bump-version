@@ -70,7 +70,6 @@ public extension Configuration {
   struct PreRelease: Codable, Equatable, Sendable {
 
     public let prefix: String?
-    // TODO: Remove optional.
     public let strategy: Strategy?
 
     public init(
@@ -84,7 +83,6 @@ public extension Configuration {
     public enum Strategy: Codable, Equatable, Sendable {
       case branch(includeCommitSha: Bool = true)
       case command(arguments: [String])
-      // TODO: Remove.
       case gitTag
 
       public var branch: Branch? {

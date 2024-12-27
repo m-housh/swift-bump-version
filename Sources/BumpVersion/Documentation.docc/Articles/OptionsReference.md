@@ -9,13 +9,13 @@ of their usage.
 
 ### General Options
 
-| Short | Long            | Argument | Description                                                          |
-| ----- | --------------- | -------- | -------------------------------------------------------------------- |
-| N/A   | --dry-run       | N/A      | Perform the command, but don't write any output files                |
-| N/A   | --git-directory | <path>   | The path to the root of your project, defaults to current directory  |
-| -h    | --help          | N/A      | Show help for a command                                              |
-| -v    | --verbose       | N/A      | Increase logging level, can be passed multiple times (example: -vvv) |
-| N/A   | --version       | N/A      | Show the version of the command line tool                            |
+| Short | Long                | Argument | Description                                                          |
+| ----- | ------------------- | -------- | -------------------------------------------------------------------- |
+| N/A   | --print             | N/A      | Perform the command, but don't write any output files                |
+| N/A   | --project-directory | <path>   | The path to the root of your project, defaults to current directory  |
+| -h    | --help              | N/A      | Show help for a command                                              |
+| -v    | --verbose           | N/A      | Increase logging level, can be passed multiple times (example: -vvv) |
+| N/A   | --version           | N/A      | Show the version of the command line tool                            |
 
 ### Configuration Options
 
@@ -30,6 +30,7 @@ of their usage.
 | N/A   | --require-existing-semvar          | N/A         | Fail if an existing semvar is not found in the version file.                       |
 | -c    | --custom-command                   | <arguments> | Use a custom command strategy for the version (any options need to proceed a '--') |
 | N/A   | --commit-sha/--no-commit-sha       | N/A         | Use the commit sha with branch version or pre-release strategy                     |
+| N/A   | --require-configuration            | N/A         | Fail if a configuration file is not found                                          |
 
 #### Pre-Release Options
 

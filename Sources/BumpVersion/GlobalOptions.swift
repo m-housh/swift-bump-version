@@ -13,13 +13,13 @@ struct GlobalOptions: ParsableArguments {
   var configOptions: ConfigurationOptions
 
   @Option(
-    name: .customLong("git-directory"),
-    help: "The git directory for the version (default: current directory)"
+    name: .customLong("project-directory"),
+    help: "The project directory. (default: current directory)"
   )
-  var gitDirectory: String?
+  var projectDirectory: String?
 
   @Flag(
-    name: .customLong("dry-run"),
+    name: .customLong("print"),
     help: "Print's what would be written to a target version file."
   )
   var dryRun: Bool = false
@@ -41,6 +41,7 @@ struct GlobalOptions: ParsableArguments {
 }
 
 struct ConfigurationOptions: ParsableArguments {
+
   @Option(
     name: [.customShort("f"), .long],
     help: "Specify the path to a configuration file. (default: .bump-version.json)",
@@ -60,6 +61,14 @@ struct ConfigurationOptions: ParsableArguments {
     """
   )
   var commitSha: Bool = true
+
+  @Flag(
+    name: .long,
+    help: """
+    Require a configuration file, otherwise fail.
+    """
+  )
+  var requireConfiguration: Bool = false
 
 }
 
@@ -126,7 +135,6 @@ struct PreReleaseOptions: ParsableArguments {
 
 }
 
-// TODO: Add custom command strategy.
 struct SemVarOptions: ParsableArguments {
 
   @Flag(

@@ -29,11 +29,26 @@ public struct ConfigurationClient: Sendable {
   public var write: @Sendable (Configuration, URL) async throws -> Void
 
   /// Find a configuration file and load it if found.
-  public func findAndLoad(_ url: URL? = nil) async throws -> Configuration {
+  ///
+  /// - Parameters:
+  ///   - url: The optional path to the configuration file.
+  ///   - strict: Fail if a configuration file is not found, otherwise return default configuration.
+  public func findAndLoad(_ url: URL? = nil, strict: Bool = true) async throws -> Configuration {
     guard let url = try? await find(url) else {
-      throw ConfigurationClientError.configurationNotFound
+      if strict {
+        throw ConfigurationClientError.configurationNotFound
+      }
+      return .default
     }
-    return (try? await load(url)) ?? .default
+
+    let loaded = try? await load(url)
+    guard let loaded else {
+      if strict {
+        throw ConfigurationClientError.configurationNotFound
+      }
+      return .default
+    }
+    return loaded
   }
 
   /// Loads configuration from the given path, or searches for the default file and loads it.
@@ -47,10 +62,12 @@ public struct ConfigurationClient: Sendable {
   public func withConfiguration<T>(
     path: String?,
     merging other: Configuration? = nil,
+    strict: Bool = true,
     operation: (Configuration) async throws -> T
   ) async throws -> T {
     let configuration = try await findAndLoad(
-      path != nil ? URL(filePath: path!) : nil
+      path != nil ? URL(filePath: path!) : nil,
+      strict: strict
     )
     return try await operation(configuration.merging(other))
   }

@@ -39,10 +39,18 @@ are ignored if your configuration or options specify to use a `branch` strategy.
 bump-version bump --minor
 ```
 
+If you want to use the default configuration without generating your own project configuration, then
+you can specify the path or module to the bump command. The default configuration will use the
+`gitTag` strategy without any pre-release strategy.
+
+```bash
+bump-version bump --minor --target-module my-tool
+```
+
 Show the output, but don't update the version file.
 
 ```bash
-bump-version bump --major --dry-run
+bump-version bump --major --print
 ```
 
 ### Generate Command
@@ -66,11 +74,10 @@ Generates a configuration file based on the passed in options.
 
 The following options are used to declare strategy used for deriving the version.
 
-| Long     | Description                                             |
-| -------- | ------------------------------------------------------- |
-| --branch | Use the branch strategy                                 |
-| --semvar | Use the semvar strategy (default)                       |
-| --print  | Print the output to stdout instead of generating a file |
+| Long     | Description                       |
+| -------- | --------------------------------- |
+| --branch | Use the branch strategy           |
+| --semvar | Use the semvar strategy (default) |
 
 ##### Generate Configuration Example
 

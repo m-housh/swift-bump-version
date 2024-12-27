@@ -18,7 +18,7 @@ struct BumpCommand: CommandRepresentable {
       ),
       makeExample(
         label: "Dry run, just show what the bumped version would be.",
-        example: "--minor --dry-run"
+        example: "--minor --print"
       )
     ])
   )

@@ -138,11 +138,12 @@ extension CliClient.SharedOptions {
   ) -> Self {
     return .init(
       dryRun: dryRun,
-      gitDirectory: gitDirectory,
+      projectDirectory: gitDirectory,
       loggingOptions: .init(command: "test", verbose: 2),
-      target: .init(module: .init(target)),
-      branch: versionStrategy.branch,
-      semvar: versionStrategy.semvar
+      configurationToMerge: .init(
+        target: .init(module: .init(target)),
+        strategy: versionStrategy
+      )
     )
   }
 }

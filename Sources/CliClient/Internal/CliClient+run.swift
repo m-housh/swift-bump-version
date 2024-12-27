@@ -25,14 +25,14 @@ public extension CliClient.SharedOptions {
         logger.trace("\nConfiguration: \(configurationString)")
 
         // This will fail if the target url is not set properly.
-        let targetUrl = try configuration.targetUrl(gitDirectory: gitDirectory)
+        let targetUrl = try configuration.targetUrl(gitDirectory: projectDirectory)
         logger.debug("Target: \(targetUrl.cleanFilePath)")
 
         // Perform the operation, which generates the new version and writes it.
         try await operation(
           configuration.currentVersion(
             targetUrl: targetUrl,
-            gitDirectory: gitDirectory
+            gitDirectory: projectDirectory
           )
         )
 
@@ -50,27 +50,20 @@ public extension CliClient.SharedOptions {
     @Dependency(\.configurationClient) var configurationClient
     @Dependency(\.logger) var logger
 
-    var strategy: Configuration.VersionStrategy?
-
-    if let branch {
+    if configurationToMerge?.strategy?.branch != nil {
       logger.trace("Merging branch strategy.")
-      strategy = .branch(branch)
-    } else if let semvar {
+      // strategy = .branch(branch)
+    } else if let semvar = configurationToMerge?.strategy?.semvar {
       logger.trace("Merging semvar strategy.")
       var semvarString = ""
       customDump(semvar, to: &semvarString)
       logger.trace("\(semvarString)")
-      strategy = .semvar(semvar)
     }
-
-    let configuration = Configuration(
-      target: target,
-      strategy: strategy
-    )
 
     return try await configurationClient.withConfiguration(
       path: configurationFile,
-      merging: configuration,
+      merging: configurationToMerge,
+      strict: requireConfigurationFile,
       operation: operation
     )
   }
@@ -82,7 +75,7 @@ public extension CliClient.SharedOptions {
       try await fileClient.write(string: string, to: url)
     } else {
       logger.debug("Skipping, due to dry-run being passed.")
-      logger.info("\n\(string)\n")
+      // logger.info("\n\(string)\n")
     }
   }
 
@@ -90,7 +83,11 @@ public extension CliClient.SharedOptions {
     @Dependency(\.logger) var logger
 
     let version = try currentVersion.version.string(allowPreReleaseTag: allowPreReleaseTag)
-    logger.debug("Version: \(version)")
+    if !dryRun {
+      logger.debug("Version: \(version)")
+    } else {
+      logger.info("Version: \(version)")
+    }
 
     let template = currentVersion.usesOptionalType ? Template.optional(version) : Template.nonOptional(version)
     logger.trace("Template string: \(template)")
@@ -160,6 +157,12 @@ extension CliClient.SharedOptions {
         }
 
         logger.debug("Bumped version: \(version)")
+
+        if dryRun {
+          logger.info("Version: \(version)")
+          return
+        }
+
         let template = usesOptionalType ? Template.optional(version) : Template.build(version)
         try await write(template, to: container.targetUrl)
       }

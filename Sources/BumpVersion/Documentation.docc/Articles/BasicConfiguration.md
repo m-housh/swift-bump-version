@@ -10,7 +10,9 @@ by the module that a `Version.swift` file resides in. It also declares the strat
 new versions.
 
 The command-line tool comes with a command to generate the configuration file for you, this should
-be ran from the root of your project.
+be ran from the root of your project or by specifying the path to write the configuration file to
+using the `-f | --configuration-file` option. The below examples assume that you're running in the
+root project directory.
 
 ```bash
 bump-version config generate --target-module my-tool

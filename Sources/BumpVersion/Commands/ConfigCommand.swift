@@ -149,8 +149,6 @@ extension ConfigCommand {
     }
   }
 
-  // TODO: Add verbose.
-  // TODO: Need to be able to generate a branch style config file.
   @dynamicMemberLookup
   struct ConfigCommandOptions: ParsableArguments {
 
@@ -210,12 +208,6 @@ private extension ConfigCommand.ConfigCommandOptions {
     case .swift:
       customDump(configuration)
     }
-
-    // guard printJson else {
-    //   customDump(configuration)
-    //   return
-    // }
-    // try handlePrintJson(configuration)
   }
 }
 
