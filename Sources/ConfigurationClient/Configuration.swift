@@ -82,7 +82,7 @@ public extension Configuration {
 
     public enum Strategy: Codable, Equatable, Sendable {
       case branch(includeCommitSha: Bool = true)
-      case command(arguments: [String])
+      case command(arguments: [String], allowPrefix: Bool? = nil)
       case gitTag
 
       public var branch: Branch? {

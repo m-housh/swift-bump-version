@@ -1,0 +1,27 @@
+{
+  "strategy" : {
+    "semvar" : {
+      "allowPreRelease" : true,
+      "preRelease" : {
+        "prefix" : "rc",
+        "strategy" : {
+          "gitTag" : {
+
+          }
+        }
+      },
+      "requireExistingFile" : false,
+      "requireExistingSemVar" : false,
+      "strategy" : {
+        "gitTag" : {
+          "exactMatch" : false
+        }
+      }
+    }
+  },
+  "target" : {
+    "module" : {
+      "name" : "BumpVersion"
+    }
+  }
+}

@@ -14,7 +14,7 @@ extension Configuration {
 
   func currentVersion(targetUrl: URL, gitDirectory: String?) async throws -> CurrentVersionContainer {
     guard let strategy else {
-      throw ConfigurationParsingError.versionNotFound
+      throw ConfigurationParsingError.versionStrategyNotFound
     }
     return try await strategy.currentVersion(
       targetUrl: targetUrl,
@@ -23,7 +23,99 @@ extension Configuration {
   }
 }
 
-extension Configuration.Target {
+@_spi(Internal)
+public extension Configuration.SemVar {
+
+  // TODO: Need to handle custom command semvar strategy.
+
+  func currentVersion(file: URL, gitDirectory: String? = nil) async throws -> CurrentVersionContainer.Version {
+    @Dependency(\.fileClient) var fileClient
+    @Dependency(\.gitClient) var gitClient
+    @Dependency(\.logger) var logger
+
+    let fileOutput = try? await fileClient.semvar(file: file, gitDirectory: gitDirectory)
+    var semVar = fileOutput?.semVar
+
+    logger.trace("file output semvar: \(String(describing: semVar))")
+
+    let usesOptionalType = fileOutput?.usesOptionalType
+
+    // We parsed a semvar from the existing file, use it.
+    if semVar != nil {
+      let semvarWithPreRelease = try await applyingPreRelease(semVar!, gitDirectory)
+
+      return .semvar(
+        semvarWithPreRelease,
+        usesOptionalType: usesOptionalType ?? false,
+        hasChanges: semvarWithPreRelease != semVar
+      )
+    }
+
+    if requireExistingFile == true {
+      logger.debug("Failed to parse existing file, and caller requires it.")
+      throw CliClientError.fileDoesNotExist(path: file.cleanFilePath)
+    }
+
+    logger.trace("Does not require existing file, checking git-tag.")
+
+    // TODO: Is this what we want to do here?  Seems that the strategy should be set by the client / configuration.
+
+    // Didn't have existing semVar loaded from file, so check for git-tag.
+    semVar = try await gitClient.version(.init(
+      gitDirectory: gitDirectory,
+      style: .tag(exactMatch: false)
+    )).semVar
+
+    if semVar != nil {
+      let semvarWithPreRelease = try await applyingPreRelease(semVar!, gitDirectory)
+      return .semvar(
+        semvarWithPreRelease,
+        usesOptionalType: usesOptionalType ?? false,
+        hasChanges: semvarWithPreRelease != semVar
+      )
+    }
+
+    if requireExistingSemVar == true {
+      logger.trace("Caller requires existing semvar and it was not found in file or git-tag.")
+      throw CliClientError.semVarNotFound
+    }
+
+    // Semvar doesn't exist, so create a new one.
+    logger.trace("Generating new semvar.")
+    return try await .semvar(
+      applyingPreRelease(.init(), gitDirectory),
+      usesOptionalType: usesOptionalType ?? false,
+      hasChanges: true
+    )
+  }
+}
+
+private extension Configuration.VersionStrategy {
+
+  func currentVersion(targetUrl: URL, gitDirectory: String?) async throws -> CurrentVersionContainer {
+    @Dependency(\.gitClient) var gitClient
+
+    guard let branch else {
+      guard let semvar else {
+        throw ConfigurationParsingError.versionStrategyError(
+          message: "Neither branch nor semvar set on configuration."
+        )
+      }
+      return try await .init(
+        targetUrl: targetUrl,
+        version: semvar.currentVersion(file: targetUrl, gitDirectory: gitDirectory)
+      )
+    }
+    return try await .init(
+      targetUrl: targetUrl,
+      version: .string(
+        gitClient.version(includeCommitSha: branch.includeCommitSha, gitDirectory: gitDirectory)
+      )
+    )
+  }
+}
+
+private extension Configuration.Target {
   func url(gitDirectory: String?) throws -> URL {
     @Dependency(\.logger) var logger
 
@@ -58,7 +150,7 @@ extension Configuration.Target {
   }
 }
 
-extension GitClient {
+private extension GitClient {
   func version(includeCommitSha: Bool, gitDirectory: String?) async throws -> String {
     @Dependency(\.gitClient) var gitClient
 
@@ -69,9 +161,8 @@ extension GitClient {
   }
 }
 
-extension Configuration.PreRelease {
+private extension Configuration.PreRelease {
 
-  // FIX: This needs to handle the pre-release type appropriatly.
   func preReleaseString(gitDirectory: String?) async throws -> PreReleaseString? {
     guard let strategy else { return nil }
 
@@ -90,10 +181,10 @@ extension Configuration.PreRelease {
         includeCommitSha: includeCommitSha,
         gitDirectory: gitDirectory
       )
-    case let .command(arguments: arguments):
+    case let .command(arguments: arguments, allowPrefix: allowPrefix):
       logger.trace("Command pre-release strategy, arguments: \(arguments).")
-      // TODO: What to do with allows prefix? Need a configuration setting for commands.
       preReleaseString = try await asyncShellClient.background(.init(arguments))
+      allowsPrefix = allowPrefix ?? false
     case .gitTag:
       logger.trace("Git tag pre-release strategy.")
       logger.trace("This will ignore any set prefix.")
@@ -105,18 +196,12 @@ extension Configuration.PreRelease {
       )).description
     }
 
-    if let prefix {
-      if allowsPrefix {
-        preReleaseString = "\(prefix)-\(preReleaseString)"
-      } else {
-        logger.warning("Found prefix, but pre-release strategy may not work properly, ignoring prefix.")
-      }
+    if let prefix, allowsPrefix {
+      preReleaseString = "\(prefix)-\(preReleaseString)"
     }
 
     guard suffix else { return .semvar(preReleaseString) }
     return .suffix(preReleaseString)
-
-    // return preReleaseString
   }
 
   enum PreReleaseString: Sendable {
@@ -125,10 +210,9 @@ extension Configuration.PreRelease {
   }
 }
 
-@_spi(Internal)
-public extension Configuration.SemVar {
+private extension Configuration.SemVar {
 
-  private func applyingPreRelease(_ semvar: SemVar, _ gitDirectory: String?) async throws -> SemVar {
+  func applyingPreRelease(_ semvar: SemVar, _ gitDirectory: String?) async throws -> SemVar {
     @Dependency(\.logger) var logger
     logger.trace("Start apply pre-release to: \(semvar)")
 
@@ -139,7 +223,6 @@ public extension Configuration.SemVar {
       return semvar
     }
 
-    // let preRelease = try await preReleaseStrategy.preReleaseString(gitDirectory: gitDirectory)
     logger.trace("Pre-release string: \(preRelease)")
 
     switch preRelease {
@@ -149,94 +232,15 @@ public extension Configuration.SemVar {
       guard let semvar = SemVar(string: string) else {
         throw CliClientError.preReleaseParsingError(string)
       }
+      if let prefix = self.preRelease?.prefix {
+        var prefixString = prefix
+        if let preReleaseString = semvar.preRelease {
+          prefixString = "\(prefix)-\(preReleaseString)"
+        }
+        return semvar.applyingPreRelease(prefixString)
+      }
       return semvar
     }
-
-    // return semVar.applyingPreRelease(preRelease)
-  }
-
-  func currentVersion(file: URL, gitDirectory: String? = nil) async throws -> CurrentVersionContainer.Version {
-    @Dependency(\.fileClient) var fileClient
-    @Dependency(\.gitClient) var gitClient
-    @Dependency(\.logger) var logger
-
-    let fileOutput = try? await fileClient.semvar(file: file, gitDirectory: gitDirectory)
-    var semVar = fileOutput?.semVar
-
-    logger.trace("file output semvar: \(String(describing: semVar))")
-
-    let usesOptionalType = fileOutput?.usesOptionalType
-
-    // We parsed a semvar from the existing file, use it.
-    if semVar != nil {
-      let semvarWithPreRelease = try await applyingPreRelease(semVar!, gitDirectory)
-
-      return .semvar(
-        semvarWithPreRelease,
-        usesOptionalType: usesOptionalType ?? false,
-        hasChanges: semvarWithPreRelease != semVar
-      )
-    }
-
-    if requireExistingFile == true {
-      logger.debug("Failed to parse existing file, and caller requires it.")
-      throw CliClientError.fileDoesNotExist(path: file.cleanFilePath)
-    }
-
-    logger.trace("Does not require existing file, checking git-tag.")
-
-    // Didn't have existing semVar loaded from file, so check for git-tag.
-    semVar = try await gitClient.version(.init(
-      gitDirectory: gitDirectory,
-      style: .tag(exactMatch: false)
-    )).semVar
-
-    if semVar != nil {
-      let semvarWithPreRelease = try await applyingPreRelease(semVar!, gitDirectory)
-      return .semvar(
-        semvarWithPreRelease,
-        usesOptionalType: usesOptionalType ?? false,
-        hasChanges: semvarWithPreRelease != semVar
-      )
-    }
-
-    if requireExistingSemVar == true {
-      logger.trace("Caller requires existing semvar and it was not found in file or git-tag.")
-      throw CliClientError.semVarNotFound
-    }
-
-    // Semvar doesn't exist, so create a new one.
-    logger.trace("Generating new semvar.")
-    return try await .semvar(
-      applyingPreRelease(.init(), gitDirectory),
-      usesOptionalType: usesOptionalType ?? false,
-      hasChanges: true
-    )
-  }
-}
-
-extension Configuration.VersionStrategy {
-
-  func currentVersion(targetUrl: URL, gitDirectory: String?) async throws -> CurrentVersionContainer {
-    @Dependency(\.gitClient) var gitClient
-
-    guard let branch else {
-      guard let semvar else {
-        throw ConfigurationParsingError.versionStrategyError(
-          message: "Neither branch nor semvar set on configuration."
-        )
-      }
-      return try await .init(
-        targetUrl: targetUrl,
-        version: semvar.currentVersion(file: targetUrl, gitDirectory: gitDirectory)
-      )
-    }
-    return try await .init(
-      targetUrl: targetUrl,
-      version: .string(
-        gitClient.version(includeCommitSha: branch.includeCommitSha, gitDirectory: gitDirectory)
-      )
-    )
   }
 }
 
@@ -244,5 +248,5 @@ enum ConfigurationParsingError: Error {
   case targetNotFound
   case pathOrModuleNotSet
   case versionStrategyError(message: String)
-  case versionNotFound
+  case versionStrategyNotFound
 }

@@ -189,7 +189,8 @@ the output is as the suffix.
       "preRelease": {
         "strategy": {
           "command": {
-            "arguments": ["my-command", "--some-option", "foo"]
+            "arguments": ["my-command", "--some-option", "foo"],
+            "allowPrefix": true
           }
         }
       }
