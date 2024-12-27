@@ -14,12 +14,14 @@ jobs:
         config: ['debug', 'release']
     steps:
     - uses: actions/checkout@v4
+    - name: Install just.
+      run: brew install just
     - name: Select Xcode ${{ matrix.xcode }}
       run: sudo xcode-select -s /Applications/Xcode_${{ matrix.xcode }}.app
     - name: Swift Version
       run: swift --version
     - name: Run ${{ matrix.xcode }} Tests
-      run: make CONFIG=${{ matrix.config }} test-library
+      run: just test --configuration ${{ matrix.config }}
 
   ubuntu:
     name: Ubuntu
