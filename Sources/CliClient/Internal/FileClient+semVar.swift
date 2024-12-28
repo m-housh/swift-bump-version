@@ -5,6 +5,46 @@ import GitClient
 
 @_spi(Internal)
 public extension FileClient {
+
+  func loadCurrentVersion(
+    url: URL,
+    gitDirectory: String?,
+    expectsBranch: Bool
+  ) async throws -> CurrentVersionContainer.CurrentVersion? {
+    @Dependency(\.logger) var logger
+
+    switch expectsBranch {
+    case true:
+      let (string, usesOptionalType) = try await branch(file: url, gitDirectory: gitDirectory)
+      logger.debug("Loaded branch: \(string)")
+      return .branch(string, usesOptionalType: usesOptionalType)
+    case false:
+      let (semvar, usesOptionalType) = try await semvar(file: url, gitDirectory: gitDirectory)
+      guard let semvar else { return nil }
+      logger.debug("Semvar: \(semvar)")
+      return .semvar(semvar, usesOptionalType: usesOptionalType)
+    }
+  }
+
+  // TODO: Make private.
+  func branch(
+    file: URL,
+    gitDirectory: String?
+  ) async throws -> (string: String, usesOptionalType: Bool) {
+    let (string, usesOptionalType) = try await getVersionString(fileUrl: file, gitDirectory: gitDirectory)
+    return (string, usesOptionalType)
+  }
+
+  // TODO: Make private.
+  func semvar(
+    file: URL,
+    gitDirectory: String?
+  ) async throws -> (semVar: SemVar?, usesOptionalType: Bool) {
+    let (string, usesOptionalType) = try await getVersionString(fileUrl: file, gitDirectory: gitDirectory)
+    let semvar = SemVar(string: string)
+    return (semvar, usesOptionalType)
+  }
+
   private func getVersionString(
     fileUrl: URL,
     gitDirectory: String?
@@ -36,17 +76,6 @@ public extension FileClient {
     }
     logger.trace("Parsed version string: \(versionString)")
     return (String(versionString), isOptional)
-  }
-
-  func semvar(
-    file: URL,
-    gitDirectory: String?
-  ) async throws -> (semVar: SemVar?, usesOptionalType: Bool) {
-    @Dependency(\.logger) var logger
-    let (string, usesOptionalType) = try await getVersionString(fileUrl: file, gitDirectory: gitDirectory)
-    let semvar = SemVar(string: string)
-    logger.debug("Semvar: \(String(describing: semvar))")
-    return (semvar, usesOptionalType)
   }
 
 }

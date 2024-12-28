@@ -23,6 +23,35 @@ extension Configuration {
   }
 }
 
+private extension Configuration.SemVar.Strategy {
+
+  func getSemvar(gitDirectory: String? = nil) async throws -> SemVar {
+    @Dependency(\.asyncShellClient) var asyncShellClient
+    @Dependency(\.gitClient) var gitClient
+    @Dependency(\.logger) var logger
+
+    let semvar: SemVar?
+
+    switch self {
+    case let .command(arguments: arguments):
+      logger.trace("Using custom command strategy with: \(arguments)")
+      semvar = try await SemVar(string: asyncShellClient.background(.init(arguments)))
+    case let .gitTag(exactMatch: exactMatch):
+      logger.trace("Using gitTag strategy.")
+      semvar = try await gitClient.version(.init(
+        gitDirectory: gitDirectory,
+        style: .tag(exactMatch: exactMatch ?? false)
+      )).semVar
+    }
+
+    guard let semvar else {
+      throw CliClientError.semVarNotFound
+    }
+
+    return semvar
+  }
+}
+
 @_spi(Internal)
 public extension Configuration.SemVar {
 
@@ -92,6 +121,9 @@ public extension Configuration.SemVar {
 
 private extension Configuration.VersionStrategy {
 
+  // TODO: This should just load the `nextVersion`, and should probably live on CurrentVersionContainer.
+
+  // FIX: Fix what's passed to current verions here.
   func currentVersion(targetUrl: URL, gitDirectory: String?) async throws -> CurrentVersionContainer {
     @Dependency(\.gitClient) var gitClient
 
@@ -103,11 +135,13 @@ private extension Configuration.VersionStrategy {
       }
       return try await .init(
         targetUrl: targetUrl,
+        currentVersion: nil,
         version: semvar.currentVersion(file: targetUrl, gitDirectory: gitDirectory)
       )
     }
     return try await .init(
       targetUrl: targetUrl,
+      currentVersion: nil,
       version: .string(
         gitClient.version(includeCommitSha: branch.includeCommitSha, gitDirectory: gitDirectory)
       )

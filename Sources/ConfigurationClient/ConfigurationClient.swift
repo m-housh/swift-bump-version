@@ -3,6 +3,8 @@ import DependenciesMacros
 import FileClient
 import Foundation
 
+// TODO: Add a method to get a semvar / handle a version strategy's ??
+
 public extension DependencyValues {
 
   /// Perform operations with configuration files.
@@ -15,6 +17,12 @@ public extension DependencyValues {
 /// Handles interactions with configuration files.
 @DependencyClient
 public struct ConfigurationClient: Sendable {
+
+  fileprivate enum Constants {
+    static let defaultFileNameWithoutExtension = ".bump-version"
+    static let defaultExtension = "json"
+    static var defaultFileName: String { "\(defaultFileNameWithoutExtension).\(defaultExtension)" }
+  }
 
   /// The default file name for a configuration file.
   public var defaultFileName: @Sendable () -> String = { "test.json" }
@@ -89,15 +97,13 @@ extension ConfigurationClient: DependencyKey {
 private func findConfiguration(_ url: URL?) async throws -> URL? {
   @Dependency(\.fileClient) var fileClient
 
-  let defaultFileName = ConfigurationClient.Constants.defaultFileNameWithoutExtension
-
   var url: URL! = url
   if url == nil {
     url = try await URL(filePath: fileClient.currentDirectory())
   }
 
   if try await fileClient.isDirectory(url.cleanFilePath) {
-    url = url.appending(path: "\(defaultFileName).json")
+    url = url.appending(path: ConfigurationClient.Constants.defaultFileName)
   }
 
   if fileClient.fileExists(url) {

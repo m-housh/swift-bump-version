@@ -44,95 +44,6 @@ public struct Configuration: Codable, Equatable, Sendable {
 
 public extension Configuration {
 
-  /// Represents a branch version or pre-release strategy.
-  ///
-  /// This derives the version or pre-release suffix from the branch name and
-  /// optionally the short version of the commit sha.
-  struct Branch: Codable, Equatable, Sendable {
-
-    /// Include the commit sha in the output for this strategy.
-    public let includeCommitSha: Bool
-
-    /// Create a new branch strategy.
-    ///
-    /// - Parameters:
-    ///   - includeCommitSha: Whether to include the commit sha.
-    public init(includeCommitSha: Bool = true) {
-      self.includeCommitSha = includeCommitSha
-    }
-  }
-
-  /// Represents version strategy for pre-release.
-  ///
-  /// This appends a suffix to the version that get's generated from the version strategy.
-  /// For example: `1.0.0-rc-1`
-  ///
-  struct PreRelease: Codable, Equatable, Sendable {
-
-    public let prefix: String?
-    public let strategy: Strategy?
-
-    public init(
-      prefix: String? = nil,
-      strategy: Strategy? = nil
-    ) {
-      self.prefix = prefix
-      self.strategy = strategy
-    }
-
-    public enum Strategy: Codable, Equatable, Sendable {
-      case branch(includeCommitSha: Bool = true)
-      case command(arguments: [String], allowPrefix: Bool? = nil)
-      case gitTag
-
-      public var branch: Branch? {
-        guard case let .branch(includeCommitSha) = self
-        else { return nil }
-        return .init(includeCommitSha: includeCommitSha)
-      }
-    }
-  }
-
-  /// Represents a semvar version strategy.
-  ///
-  /// ## Example: 1.0.0
-  ///
-  struct SemVar: Codable, Equatable, Sendable {
-
-    public let allowPreRelease: Bool?
-
-    /// Optional pre-releas suffix strategy.
-    public let preRelease: PreRelease?
-
-    /// Fail if an existing version file does not exist in the target.
-    public let requireExistingFile: Bool?
-
-    /// Fail if an existing semvar is not parsed from the file or version generation strategy.
-    public let requireExistingSemVar: Bool?
-
-    public let strategy: Strategy?
-
-    public init(
-      allowPreRelease: Bool? = true,
-      preRelease: PreRelease? = nil,
-      requireExistingFile: Bool? = false,
-      requireExistingSemVar: Bool? = false,
-      strategy: Strategy? = nil
-    ) {
-      self.allowPreRelease = allowPreRelease
-      self.preRelease = preRelease
-      self.requireExistingFile = requireExistingFile
-      self.requireExistingSemVar = requireExistingSemVar
-      self.strategy = strategy
-    }
-
-    public enum Strategy: Codable, Equatable, Sendable {
-      case command(arguments: [String])
-      case gitTag(exactMatch: Bool? = false)
-    }
-
-  }
-
   /// Represents the target where we will bump the version in.
   ///
   /// This can either be a path to a version file or a module used to
@@ -281,6 +192,95 @@ public extension Configuration {
         return .init(self, children: ["semvar": semvar!], displayStyle: .struct)
       }
     }
+  }
+
+  /// Represents a branch version or pre-release strategy.
+  ///
+  /// This derives the version or pre-release suffix from the branch name and
+  /// optionally the short version of the commit sha.
+  struct Branch: Codable, Equatable, Sendable {
+
+    /// Include the commit sha in the output for this strategy.
+    public let includeCommitSha: Bool
+
+    /// Create a new branch strategy.
+    ///
+    /// - Parameters:
+    ///   - includeCommitSha: Whether to include the commit sha.
+    public init(includeCommitSha: Bool = true) {
+      self.includeCommitSha = includeCommitSha
+    }
+  }
+
+  /// Represents version strategy for pre-release.
+  ///
+  /// This appends a suffix to the version that get's generated from the version strategy.
+  /// For example: `1.0.0-rc-1`
+  ///
+  struct PreRelease: Codable, Equatable, Sendable {
+
+    public let prefix: String?
+    public let strategy: Strategy?
+
+    public init(
+      prefix: String? = nil,
+      strategy: Strategy? = nil
+    ) {
+      self.prefix = prefix
+      self.strategy = strategy
+    }
+
+    public enum Strategy: Codable, Equatable, Sendable {
+      case branch(includeCommitSha: Bool = true)
+      case command(arguments: [String], allowPrefix: Bool? = nil)
+      case gitTag
+
+      public var branch: Branch? {
+        guard case let .branch(includeCommitSha) = self
+        else { return nil }
+        return .init(includeCommitSha: includeCommitSha)
+      }
+    }
+  }
+
+  /// Represents a semvar version strategy.
+  ///
+  /// ## Example: 1.0.0
+  ///
+  struct SemVar: Codable, Equatable, Sendable {
+
+    public let allowPreRelease: Bool?
+
+    /// Optional pre-releas suffix strategy.
+    public let preRelease: PreRelease?
+
+    /// Fail if an existing version file does not exist in the target.
+    public let requireExistingFile: Bool?
+
+    /// Fail if an existing semvar is not parsed from the file or version generation strategy.
+    public let requireExistingSemVar: Bool?
+
+    public let strategy: Strategy?
+
+    public init(
+      allowPreRelease: Bool? = true,
+      preRelease: PreRelease? = nil,
+      requireExistingFile: Bool? = false,
+      requireExistingSemVar: Bool? = false,
+      strategy: Strategy? = nil
+    ) {
+      self.allowPreRelease = allowPreRelease
+      self.preRelease = preRelease
+      self.requireExistingFile = requireExistingFile
+      self.requireExistingSemVar = requireExistingSemVar
+      self.strategy = strategy
+    }
+
+    public enum Strategy: Codable, Equatable, Sendable {
+      case command(arguments: [String])
+      case gitTag(exactMatch: Bool? = false)
+    }
+
   }
 
 }
