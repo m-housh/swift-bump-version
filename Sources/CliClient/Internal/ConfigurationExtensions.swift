@@ -1,4 +1,5 @@
 import ConfigurationClient
+import CustomDump
 import Dependencies
 import Foundation
 import GitClient
@@ -116,6 +117,38 @@ public extension Configuration.SemVar {
       usesOptionalType: usesOptionalType ?? false,
       hasChanges: true
     )
+  }
+}
+
+extension Configuration.VersionStrategy {
+
+  func loadNextVersion(gitDirectory: String?) async throws -> CurrentVersionContainer.Version {
+    @Dependency(\.gitClient) var gitClient
+    @Dependency(\.logger) var logger
+
+    switch self {
+    case let .branch(includeCommitSha: includeCommitSha):
+      logger.trace("Loading next version for branch strategy...")
+      let next = try await gitClient.version(includeCommitSha: includeCommitSha, gitDirectory: gitDirectory)
+      logger.trace("Next version: \(next)")
+      return .string(next)
+    case .semvar:
+      logger.trace("Loading next version for semvar strategy...")
+      let semvar = semvar!
+      guard let strategy = semvar.strategy else {
+        // TODO: Error here.
+        fatalError()
+      }
+      let next = try await strategy.getSemvar(gitDirectory: gitDirectory)
+      var nextString = ""
+      customDump(next, to: &nextString)
+      logger.trace("Next version:\n\(nextString)")
+
+      // TODO: Need to check for pre-release and load it here.
+
+      // TODO: Fix optional type / has changes.
+      return .semvar(next, usesOptionalType: true, hasChanges: true)
+    }
   }
 }
 
@@ -246,6 +279,7 @@ private extension Configuration.PreRelease {
 
 private extension Configuration.SemVar {
 
+  // TODO: Move this to SemVar, not Configuration.SemVar
   func applyingPreRelease(_ semvar: SemVar, _ gitDirectory: String?) async throws -> SemVar {
     @Dependency(\.logger) var logger
     logger.trace("Start apply pre-release to: \(semvar)")

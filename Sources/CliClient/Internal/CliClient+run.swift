@@ -96,45 +96,6 @@ public extension CliClient.SharedOptions {
   }
 }
 
-// TODO: Add optional property for currentVersion (loaded version from file)
-//       and rename version to nextVersion.
-
-@_spi(Internal)
-public struct CurrentVersionContainer: Sendable {
-
-  let targetUrl: URL
-  let currentVersion: CurrentVersion?
-  let version: Version
-
-  var usesOptionalType: Bool {
-    switch version {
-    case .string: return false
-    case let .semvar(_, usesOptionalType, _): return usesOptionalType
-    }
-  }
-
-  public enum CurrentVersion: Sendable {
-    case branch(String, usesOptionalType: Bool)
-    case semvar(SemVar, usesOptionalType: Bool)
-  }
-
-  public enum Version: Sendable {
-    // TODO: Call this branch for consistency.
-    case string(String)
-    // TODO: Remove has changes when currentVersion/nextVersion is implemented.
-    case semvar(SemVar, usesOptionalType: Bool = true, hasChanges: Bool)
-
-    func string(allowPreReleaseTag: Bool) throws -> String {
-      switch self {
-      case let .string(string):
-        return string
-      case let .semvar(semvar, usesOptionalType: _, hasChanges: _):
-        return semvar.versionString(withPreReleaseTag: allowPreReleaseTag)
-      }
-    }
-  }
-}
-
 extension CliClient.SharedOptions {
 
   func build(_ environment: [String: String]) async throws -> String {
