@@ -5,44 +5,35 @@ import GitClient
 
 @_spi(Internal)
 public extension FileClient {
-
-  func loadCurrentVersion(
-    url: URL,
-    gitDirectory: String?,
-    expectsBranch: Bool
-  ) async throws -> CurrentVersionContainer.CurrentVersion? {
-    @Dependency(\.logger) var logger
-
-    switch expectsBranch {
-    case true:
-      let (string, usesOptionalType) = try await branch(file: url, gitDirectory: gitDirectory)
-      logger.debug("Loaded branch: \(string)")
-      return .branch(string, usesOptionalType: usesOptionalType)
-    case false:
-      let (semvar, usesOptionalType) = try await semvar(file: url, gitDirectory: gitDirectory)
-      guard let semvar else { return nil }
-      logger.debug("Semvar: \(semvar)")
-      return .semvar(semvar, usesOptionalType: usesOptionalType)
-    }
-  }
-
-  // TODO: Make private.
   func branch(
     file: URL,
-    gitDirectory: String?
-  ) async throws -> (string: String, usesOptionalType: Bool) {
-    let (string, usesOptionalType) = try await getVersionString(fileUrl: file, gitDirectory: gitDirectory)
-    return (string, usesOptionalType)
+    gitDirectory: String?,
+    requireExistingFile: Bool
+  ) async throws -> (string: String, usesOptionalType: Bool)? {
+    let loaded = try? await getVersionString(fileUrl: file, gitDirectory: gitDirectory)
+    guard let loaded else {
+      if requireExistingFile {
+        throw CliClientError.fileDoesNotExist(path: file.cleanFilePath)
+      }
+      return nil
+    }
+    return (loaded.0, loaded.1)
   }
 
-  // TODO: Make private.
   func semvar(
     file: URL,
-    gitDirectory: String?
-  ) async throws -> (semVar: SemVar?, usesOptionalType: Bool) {
-    let (string, usesOptionalType) = try await getVersionString(fileUrl: file, gitDirectory: gitDirectory)
-    let semvar = SemVar(string: string)
-    return (semvar, usesOptionalType)
+    gitDirectory: String?,
+    requireExistingFile: Bool
+  ) async throws -> (semVar: SemVar?, usesOptionalType: Bool)? {
+    let loaded = try? await getVersionString(fileUrl: file, gitDirectory: gitDirectory)
+    guard let loaded else {
+      if requireExistingFile {
+        throw CliClientError.fileDoesNotExist(path: file.cleanFilePath)
+      }
+      return nil
+    }
+    let semvar = SemVar(string: loaded.0)
+    return (semvar, loaded.1)
   }
 
   private func getVersionString(

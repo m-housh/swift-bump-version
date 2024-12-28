@@ -1,4 +1,6 @@
+import CustomDump
 import Dependencies
+import Logging
 import ShellClient
 
 public struct LoggingOptions: Equatable, Sendable {
@@ -24,5 +26,17 @@ public struct LoggingOptions: Equatable, Sendable {
     } operation: {
       try await operation()
     }
+  }
+}
+
+public extension Logger {
+  func dump<T>(
+    _ type: T,
+    level: Level = .trace,
+    buildMessage: @escaping (String) -> String = { $0 }
+  ) {
+    var message = ""
+    customDump(type, to: &message)
+    log(level: level, "\(buildMessage(message))")
   }
 }

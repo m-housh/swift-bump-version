@@ -15,8 +15,10 @@ struct CliClientTests {
     arguments: TestArguments.testCases
   )
   func testBuild(target: String) async throws {
+    let template = Template.build("1.0.0")
     try await run {
       $0.fileClient.fileExists = { _ in true }
+      $0.fileClient.read = { @Sendable _ in template }
     } operation: {
       @Dependency(\.cliClient) var client
       let output = try await client.build(.testOptions(

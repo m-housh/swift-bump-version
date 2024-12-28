@@ -87,6 +87,7 @@ let package = Package(
     .target(
       name: "LoggingExtensions",
       dependencies: [
+        .product(name: "CustomDump", package: "swift-custom-dump"),
         .product(name: "Dependencies", package: "swift-dependencies"),
         .product(name: "ShellClient", package: "swift-shell-client")
       ]

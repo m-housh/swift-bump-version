@@ -3,101 +3,160 @@ import CustomDump
 import Dependencies
 import FileClient
 import Foundation
+import LoggingExtensions
 
-// TODO: Add optional property for currentVersion (loaded version from file)
-//       and rename version to nextVersion.
+enum VersionContainer: Sendable {
+  case branch(CurrentVersionContainer2<String>)
+  case semvar(CurrentVersionContainer2<SemVar>)
 
-/// An internal type that holds onto the loaded version from a file (if found),
-/// the computed next version, and the target file url.
-///
-@_spi(Internal)
-public struct CurrentVersionContainer: Sendable {
-
-  let targetUrl: URL
-  let currentVersion: CurrentVersion?
-  let version: Version
-
-  // TODO: Derive from current version.
-  var usesOptionalType: Bool {
-    switch version {
-    case .string: return false
-    case let .semvar(_, usesOptionalType, _): return usesOptionalType
-    }
-  }
-
-  var hasChanges: Bool {
-    guard let currentVersion else { return false }
-    switch (currentVersion, version) {
-    case let (.branch(currentString, _), .string(nextString)):
-      return currentString == nextString
-    case let (.semvar(currentSemvar, _), .semvar(nextSemvar, _, _)):
-      return currentSemvar == nextSemvar
-    // TODO: What to do with mis-matched values.
-    case (.branch, .semvar),
-         (.semvar, .string):
-      return true
-    }
-  }
-
-  public enum CurrentVersion: Sendable {
-    case branch(String, usesOptionalType: Bool)
-    case semvar(SemVar, usesOptionalType: Bool)
-  }
-
-  public enum Version: Sendable {
-    // TODO: Call this branch for consistency.
-    case string(String)
-    // TODO: Remove has changes when currentVersion/nextVersion is implemented.
-    case semvar(SemVar, usesOptionalType: Bool = true, hasChanges: Bool)
-
-    func string(allowPreReleaseTag: Bool) throws -> String {
-      switch self {
-      case let .string(string):
-        return string
-      case let .semvar(semvar, usesOptionalType: _, hasChanges: _):
-        return semvar.versionString(withPreReleaseTag: allowPreReleaseTag)
-      }
+  static func load(
+    projectDirectory: String?,
+    strategy: Configuration.VersionStrategy,
+    url: URL
+  ) async throws -> Self {
+    switch strategy {
+    case let .branch(includeCommitSha: includeCommitSha):
+      return try await .branch(.load(
+        branch: .init(includeCommitSha: includeCommitSha),
+        gitDirectory: projectDirectory,
+        url: url
+      ))
+    case .semvar:
+      return try await .semvar(.load(
+        semvar: strategy.semvar!,
+        gitDirectory: projectDirectory,
+        url: url
+      ))
     }
   }
 }
 
-extension CurrentVersionContainer {
+struct CurrentVersionContainer2<Version> {
+  let targetUrl: URL
+  let usesOptionalType: Bool
+  let loadedVersion: Version?
+  // TODO: Rename to strategyVersion
+  let nextVersion: Version?
+}
+
+extension CurrentVersionContainer2: Equatable where Version: Equatable {
+
+  var hasChanges: Bool {
+    switch (loadedVersion, nextVersion) {
+    case (.none, .none):
+      return false
+    case (.some, .none),
+         (.none, .some):
+      return true
+    case let (.some(loaded), .some(next)):
+      return loaded == next
+    }
+  }
+}
+
+extension CurrentVersionContainer2: Sendable where Version: Sendable {}
+
+extension CurrentVersionContainer2 where Version == String {
 
   static func load(
-    configuration: Configuration,
-    sharedOptions: CliClient.SharedOptions
+    branch: Configuration.Branch,
+    gitDirectory: String?,
+    url: URL
   ) async throws -> Self {
+    @Dependency(\.fileClient) var fileClient
+    @Dependency(\.gitClient) var gitClient
+
+    let loaded = try await fileClient.branch(
+      file: url,
+      gitDirectory: gitDirectory,
+      requireExistingFile: false
+    )
+
+    let next = try await gitClient.version(.init(
+      gitDirectory: gitDirectory,
+      style: .branch(commitSha: branch.includeCommitSha)
+    ))
+
+    return .init(
+      targetUrl: url,
+      usesOptionalType: loaded?.1 ?? true,
+      loadedVersion: loaded?.0,
+      nextVersion: next.description
+    )
+  }
+
+  var versionString: String? {
+    loadedVersion ?? nextVersion
+  }
+}
+
+extension CurrentVersionContainer2 where Version == SemVar {
+
+  static func load(semvar: Configuration.SemVar, gitDirectory: String?, url: URL) async throws -> Self {
     @Dependency(\.fileClient) var fileClient
     @Dependency(\.logger) var logger
 
-    let targetUrl = try configuration.targetUrl(gitDirectory: sharedOptions.projectDirectory)
-    logger.trace("Begin loading current version from: \(targetUrl.cleanFilePath)")
+    logger.trace("Begin loading semvar from: \(url.cleanFilePath)")
 
-    let currentVersion = try await fileClient.loadCurrentVersion(
-      url: targetUrl,
-      gitDirectory: sharedOptions.projectDirectory,
-      expectsBranch: configuration.strategy?.branch != nil
+    async let (loaded, usesOptionalType) = try await loadCurrentVersion(
+      semvar: semvar,
+      gitDirectory: gitDirectory,
+      url: url
     )
-    var currentVersionString = ""
-    customDump(currentVersion, to: &currentVersionString)
-    logger.trace("Loaded current version:\n\(currentVersionString)")
+    async let next = try await loadNextVersion(semvar: semvar, projectDirectory: gitDirectory)
 
-    if configuration.strategy?.semvar?.requireExistingFile == true {
-      guard currentVersion != nil else {
-        // TODO: Better error.
-        throw CliClientError.semVarNotFound
+    return try await .init(
+      targetUrl: url,
+      usesOptionalType: usesOptionalType,
+      loadedVersion: loaded,
+      nextVersion: next
+    )
+  }
+
+  static func loadCurrentVersion(
+    semvar: Configuration.SemVar,
+    gitDirectory: String?,
+    url: URL
+  ) async throws -> (SemVar?, Bool) {
+    @Dependency(\.fileClient) var fileClient
+    @Dependency(\.logger) var logger
+
+    logger.trace("Begin loading current version from: \(url.cleanFilePath)")
+
+    let loadedOptional = try await fileClient.semvar(
+      file: url,
+      gitDirectory: gitDirectory,
+      requireExistingFile: semvar.requireExistingFile ?? false
+    )
+    guard let loadedStrong = loadedOptional else {
+      if semvar.requireExistingFile ?? false {
+        throw CliClientError.semVarNotFound(message: "Required by configuration's 'requireExistingFile' variable.")
       }
+      return (nil, true)
     }
 
-    // Check that there's a valid strategy to get the next version.
-    guard let strategy = configuration.strategy else {
-      // TODO: Return without a next version here when nextVersion is optional.
-      fatalError()
-    }
+    let (loaded, usesOptionalType) = loadedStrong
 
-    // TODO: make optional?
-    let next = try await strategy.loadNextVersion(gitDirectory: sharedOptions.projectDirectory)
+    logger.dump(loaded) { "Loaded version:\n\($0)" }
+    return (loaded, usesOptionalType)
+  }
 
-    fatalError()
+  static func loadNextVersion(semvar: Configuration.SemVar, projectDirectory: String?) async throws -> SemVar? {
+    @Dependency(\.logger) var logger
+    let next = try await SemVar.nextVersion(
+      configuration: semvar,
+      projectDirectory: projectDirectory
+    )
+    logger.dump(next) { "Next version:\n\($0)" }
+    return next
+  }
+
+  func versionString(withPreRelease: Bool) -> String? {
+    nextVersion?.versionString(withPreReleaseTag: withPreRelease)
+      ?? loadedVersion?.versionString(withPreReleaseTag: withPreRelease)
+  }
+
+  func withUpdateNextVersion(_ next: SemVar) -> Self {
+    .init(targetUrl: targetUrl, usesOptionalType: usesOptionalType, loadedVersion: loadedVersion, nextVersion: next)
   }
 }

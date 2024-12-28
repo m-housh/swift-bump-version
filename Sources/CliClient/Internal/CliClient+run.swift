@@ -4,25 +4,29 @@ import Dependencies
 import FileClient
 import Foundation
 import GitClient
+import LoggingExtensions
 
-@_spi(Internal)
-public extension CliClient.SharedOptions {
+extension CliClient.SharedOptions {
 
   /// All cli-client calls should run through this, it set's up logging,
   /// loads configuration, and generates the current version based on the
   /// configuration.
   @discardableResult
   func run(
-    _ operation: (CurrentVersionContainer) async throws -> Void
+    _ operation: (VersionContainer) async throws -> Void
   ) async rethrows -> String {
     try await loggingOptions.withLogger {
       // Load the default configuration, if it exists.
       try await withMergedConfiguration { configuration in
         @Dependency(\.logger) var logger
 
-        var configurationString = ""
-        customDump(configuration, to: &configurationString)
-        logger.trace("\nConfiguration: \(configurationString)")
+        guard let strategy = configuration.strategy else {
+          throw CliClientError.strategyNotFound(configuration: configuration)
+        }
+
+        logger.dump(configuration, level: .trace) {
+          "\nConfiguration: \($0)"
+        }
 
         // This will fail if the target url is not set properly.
         let targetUrl = try configuration.targetUrl(gitDirectory: projectDirectory)
@@ -30,10 +34,7 @@ public extension CliClient.SharedOptions {
 
         // Perform the operation, which generates the new version and writes it.
         try await operation(
-          configuration.currentVersion(
-            targetUrl: targetUrl,
-            gitDirectory: projectDirectory
-          )
+          .load(projectDirectory: projectDirectory, strategy: strategy, url: targetUrl)
         )
 
         // Return the file path we wrote the version to.
@@ -54,10 +55,9 @@ public extension CliClient.SharedOptions {
       logger.trace("Merging branch strategy.")
       // strategy = .branch(branch)
     } else if let semvar = configurationToMerge?.strategy?.semvar {
-      logger.trace("Merging semvar strategy.")
-      var semvarString = ""
-      customDump(semvar, to: &semvarString)
-      logger.trace("\(semvarString)")
+      logger.dump(semvar, level: .trace) {
+        "Merging semvar strategy:\n\($0)"
+      }
     }
 
     return try await configurationClient.withConfiguration(
@@ -75,24 +75,52 @@ public extension CliClient.SharedOptions {
       try await fileClient.write(string: string, to: url)
     } else {
       logger.debug("Skipping, due to dry-run being passed.")
-      // logger.info("\n\(string)\n")
     }
   }
 
-  func write(_ currentVersion: CurrentVersionContainer) async throws {
+  func write(_ currentVersion: VersionContainer) async throws {
     @Dependency(\.logger) var logger
+    logger.trace("Begin writing version.")
 
-    let version = try currentVersion.version.string(allowPreReleaseTag: allowPreReleaseTag)
-    if !dryRun {
-      logger.debug("Version: \(version)")
-    } else {
-      logger.info("Version: \(version)")
+    let hasChanges: Bool
+    let targetUrl: URL
+    let usesOptionalType: Bool
+    let versionString: String?
+
+    switch currentVersion {
+    case let .branch(branch):
+      hasChanges = branch.hasChanges
+      targetUrl = branch.targetUrl
+      usesOptionalType = branch.usesOptionalType
+      versionString = branch.versionString
+    case let .semvar(semvar):
+      hasChanges = semvar.hasChanges
+      targetUrl = semvar.targetUrl
+      usesOptionalType = semvar.usesOptionalType
+      versionString = semvar.versionString(withPreRelease: allowPreReleaseTag)
     }
 
-    let template = currentVersion.usesOptionalType ? Template.optional(version) : Template.nonOptional(version)
+    // if !hasChanges {
+    //   logger.debug("No changes from loaded version, not writing next version.")
+    //   return
+    // }
+
+    guard let versionString else {
+      throw CliClientError.versionStringNotFound
+    }
+
+    // let version = try currentVersion.version.string(allowPreReleaseTag: allowPreReleaseTag)
+
+    if !dryRun {
+      logger.debug("Version: \(versionString)")
+    } else {
+      logger.info("Version: \(versionString)")
+    }
+
+    let template = usesOptionalType ? Template.optional(versionString) : Template.nonOptional(versionString)
     logger.trace("Template string: \(template)")
 
-    try await write(template, to: currentVersion.targetUrl)
+    try await write(template, to: targetUrl)
   }
 }
 
@@ -113,30 +141,20 @@ extension CliClient.SharedOptions {
 
       @Dependency(\.logger) var logger
 
-      switch container.version {
-      case .string: // When we did not parse a semvar, just write whatever we parsed for the current version.
+      switch container {
+      case .branch: // When we did not parse a semvar, just write whatever we parsed for the current version.
         logger.debug("Failed to parse semvar, but got current version string.")
         try await write(container)
 
-      case let .semvar(semvar, usesOptionalType: usesOptionalType, hasChanges: hasChanges):
-        logger.debug("Semvar prior to bumping: \(semvar)")
-        let bumped = semvar.bump(type)
-        let version = bumped.versionString(withPreReleaseTag: allowPreReleaseTag)
-
-        guard bumped != semvar || hasChanges else {
-          logger.debug("No change, skipping.")
-          return
+      case let .semvar(semvar):
+        // FIX: Fix with an option for precedence.
+        let version = semvar.loadedVersion ?? semvar.nextVersion
+        guard let version else {
+          throw CliClientError.semVarNotFound(message: "Failed to parse a valid semvar to bump.")
         }
-
-        logger.debug("Bumped version: \(version)")
-
-        if dryRun {
-          logger.info("Version: \(version)")
-          return
-        }
-
-        let template = usesOptionalType ? Template.optional(version) : Template.build(version)
-        try await write(template, to: container.targetUrl)
+        logger.debug("Semvar prior to bumping: \(version)")
+        let bumped = version.bump(type)
+        try await write(.semvar(semvar.withUpdateNextVersion(bumped)))
       }
     }
   }
