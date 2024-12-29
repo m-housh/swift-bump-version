@@ -19,18 +19,24 @@ of their usage.
 
 ### Configuration Options
 
-| Short | Long                               | Argument    | Description                                                                        |
-| ----- | ---------------------------------- | ----------- | ---------------------------------------------------------------------------------- |
-| -f    | --configuration-file               | <path>      | The path to the configuration to use.                                              |
-| -m    | --target-module                    | <name>      | The target module name inside your project                                         |
-| -n    | --target-file-name                 | <name>      | The file name for the version to be found inside the module                        |
-| -p    | --target-file-path                 | <path>      | Path to a version file in your project                                             |
-| N/A   | --enable-git-tag/--disable-git-tag | N/A         | Use the git-tag version strategy                                                   |
-| N/A   | --require-exact-match              | N/A         | Fail if a tag is not specifically set on the commit                                |
-| N/A   | --require-existing-semvar          | N/A         | Fail if an existing semvar is not found in the version file.                       |
-| -c    | --custom-command                   | <arguments> | Use a custom command strategy for the version (any options need to proceed a '--') |
-| N/A   | --commit-sha/--no-commit-sha       | N/A         | Use the commit sha with branch version or pre-release strategy                     |
-| N/A   | --require-configuration            | N/A         | Fail if a configuration file is not found                                          |
+| Short | Long                               | Argument     | Description                                                                         |
+| ----- | ---------------------------------- | ------------ | ----------------------------------------------------------------------------------- |
+| -f    | --configuration-file               | <path>       | The path to the configuration to use.                                               |
+| -m    | --target-module                    | <name>       | The target module name inside your project                                          |
+| -n    | --target-file-name                 | <name>       | The file name for the version to be found inside the module                         |
+| -p    | --target-file-path                 | <path>       | Path to a version file in your project                                              |
+| N/A   | --enable-git-tag/--disable-git-tag | N/A          | Use the git-tag version strategy                                                    |
+| N/A   | --require-exact-match              | N/A          | Fail if a tag is not specifically set on the commit                                 |
+| N/A   | --require-existing-semvar          | N/A          | Fail if an existing semvar is not found in the version file.                        |
+| -c    | --custom-command                   | <arguments>  | Use a custom command strategy for the version (any options need to proceed a '--')  |
+| N/A   | --commit-sha/--no-commit-sha       | N/A          | Use the commit sha with branch version or pre-release strategy                      |
+| N/A   | --require-configuration            | N/A          | Fail if a configuration file is not found                                           |
+| N/A   | --precedence                       | <precedence> | The precedence for when a file exists (values: ['file', 'strategy'], default: file) |
+
+> Note: Precedence is used as tie breaker if the version in the file does not agree with the version
+> from the configured strategy. This can happen if a file was edited / bumped manually or the value
+> returned from the external command is not similar to the version in the file. By default the file
+> will take precedence over what is returned from the strategy.
 
 #### Pre-Release Options
 

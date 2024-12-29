@@ -257,8 +257,15 @@ public extension Configuration {
   ///
   struct SemVar: Codable, Equatable, Sendable {
 
+    /// Allow semvar to include a pre-release suffix.
     public let allowPreRelease: Bool?
 
+    /// Set the precedence of version loaded from file versus
+    /// the version returned by the strategy.
+    ///
+    /// These can not always agree / reflect the same version,
+    /// so the default is to give the file version precedence over
+    /// the strategy.
     public let precedence: Precedence?
 
     /// Optional pre-releas suffix strategy.
@@ -270,11 +277,12 @@ public extension Configuration {
     /// Fail if an existing semvar is not parsed from the file or version generation strategy.
     public let requireExistingSemVar: Bool?
 
+    /// The strategy used to derive a version for the project.
     public let strategy: Strategy?
 
     public init(
       allowPreRelease: Bool? = true,
-      precedence: Precedence? = .default,
+      precedence: Precedence? = nil,
       preRelease: PreRelease? = nil,
       requireExistingFile: Bool? = false,
       requireExistingSemVar: Bool? = false,
@@ -288,15 +296,31 @@ public extension Configuration {
       self.strategy = strategy
     }
 
+    /// Represents a strategy to derive a version for a project.
     public enum Strategy: Codable, Equatable, Sendable {
+      /// A custom external command that should return a string that
+      /// can be parsed as a semvar.
       case command(arguments: [String])
+
+      /// Use `git describe --tags` optionally as an exact match.
       case gitTag(exactMatch: Bool? = false)
     }
 
+    /// Represents the precedence for which version to use when a file
+    /// exists, as they don't always agree.  For example, a file could be edited
+    /// manually or the tag doesn't represent what is parsed from calling the
+    /// strategy.
+    ///
+    /// The default is to defer to the file (if it exists) as having precedence over
+    /// the strategy.
     public enum Precedence: String, CaseIterable, Codable, Equatable, Sendable {
+
+      /// Give the file precedence over the strategy.
       case file
+      /// Give the strategy precedence over the file.
       case strategy
 
+      /// The default precedence.
       public static var `default`: Self { .file }
     }
 
