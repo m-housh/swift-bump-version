@@ -173,5 +173,19 @@ struct SemVarOptions: ParsableArguments {
   )
   var customCommand: Bool = false
 
+  @Option(
+    name: .long,
+    help: """
+    Set the precence to prefer version from file or strategy.
+    """
+  )
+  var precedence: Configuration.SemVar.Precedence?
+
   @OptionGroup var preRelease: PreReleaseOptions
+}
+
+extension Configuration.SemVar.Precedence: ExpressibleByArgument {
+  public init?(argument: String) {
+    self.init(rawValue: argument)
+  }
 }

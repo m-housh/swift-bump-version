@@ -136,8 +136,11 @@ extension SemVarOptions {
       """)
     }
 
+    logger.trace("precedence: \(String(describing: precedence))")
+
     return try .init(
       allowPreRelease: !preRelease.disablePreRelease,
+      precedence: precedence,
       preRelease: customCommand ? nil : preRelease.configPreReleaseStrategy(
         includeCommitSha: includeCommitSha,
         extraOptions: extraOptions

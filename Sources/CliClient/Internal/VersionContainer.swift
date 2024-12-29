@@ -95,6 +95,11 @@ extension CurrentVersionContainer where Version == String {
 
 extension CurrentVersionContainer where Version == SemVar {
 
+  // var preferredSemvar: SemVar? {
+  //   switch precedence {
+  //   }
+  // }
+
   // TODO: Update to use precedence and not fetch `nextVersion` if we loaded a file version.
   static func load(semvar: Configuration.SemVar, gitDirectory: String?, url: URL) async throws -> Self {
     @Dependency(\.fileClient) var fileClient

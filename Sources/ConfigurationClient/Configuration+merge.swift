@@ -1,6 +1,7 @@
 import Dependencies
 import FileClient
 import Foundation
+import LoggingExtensions
 
 @_spi(Internal)
 public extension Configuration {
@@ -44,8 +45,12 @@ public extension Configuration.Branch {
 @_spi(Internal)
 public extension Configuration.SemVar {
   func merging(_ other: Self?) -> Self {
-    .init(
+    @Dependency(\.logger) var logger
+    logger.dump(other, level: .trace) { "Merging semvar:\n\($0)" }
+
+    return .init(
       allowPreRelease: other?.allowPreRelease ?? allowPreRelease,
+      precedence: other?.precedence ?? precedence,
       preRelease: preRelease == nil ? other?.preRelease : preRelease!.merging(other?.preRelease),
       requireExistingFile: other?.requireExistingFile ?? requireExistingFile,
       requireExistingSemVar: other?.requireExistingSemVar ?? requireExistingSemVar,

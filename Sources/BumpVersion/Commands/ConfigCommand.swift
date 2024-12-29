@@ -60,6 +60,7 @@ extension ConfigCommand {
     @OptionGroup var globals: ConfigCommandOptions
 
     func run() async throws {
+      @Dependency(\.logger) var logger
       let configuration = try await globals
         .shared(command: Self.commandName)
         .runClient(\.parsedConfiguration)
@@ -183,7 +184,11 @@ private extension ConfigCommand.DumpConfig {
 private extension ConfigCommand.ConfigCommandOptions {
 
   func shared(command: String) throws -> CliClient.SharedOptions {
-    try configOptions.shared(command: command, extraOptions: extraOptions, verbose: verbose)
+    try configOptions.shared(
+      command: command,
+      extraOptions: extraOptions,
+      verbose: verbose
+    )
   }
 
   func handlePrintJson(_ configuration: Configuration) throws {

@@ -145,6 +145,7 @@ public extension Configuration {
 
     case semvar(
       allowPreRelease: Bool? = nil,
+      precedence: SemVar.Precedence? = nil,
       preRelease: PreRelease? = nil,
       requireExistingFile: Bool? = nil,
       requireExistingSemVar: Bool? = nil,
@@ -159,10 +160,16 @@ public extension Configuration {
     }
 
     public var semvar: SemVar? {
-      guard case let .semvar(allowPreRelease, preRelease, requireExistingFile, requireExistingSemVar, strategy) = self
+      guard case let .semvar(
+        allowPreRelease,
+        precedence,
+        preRelease,
+        requireExistingFile, requireExistingSemVar, strategy
+      ) = self
       else { return nil }
       return .init(
         allowPreRelease: allowPreRelease,
+        precedence: precedence,
         preRelease: preRelease,
         requireExistingFile: requireExistingFile ?? false,
         requireExistingSemVar: requireExistingSemVar ?? false,
@@ -177,6 +184,7 @@ public extension Configuration {
     public static func semvar(_ value: SemVar) -> Self {
       .semvar(
         allowPreRelease: value.allowPreRelease,
+        precedence: value.precedence,
         preRelease: value.preRelease,
         requireExistingFile: value.requireExistingFile,
         requireExistingSemVar: value.requireExistingSemVar,
@@ -285,7 +293,7 @@ public extension Configuration {
       case gitTag(exactMatch: Bool? = false)
     }
 
-    public enum Precedence: String, Codable, Equatable, Sendable {
+    public enum Precedence: String, CaseIterable, Codable, Equatable, Sendable {
       case file
       case strategy
 
