@@ -6,8 +6,8 @@ import Foundation
 import LoggingExtensions
 
 enum VersionContainer: Sendable {
-  case branch(CurrentVersionContainer2<String>)
-  case semvar(CurrentVersionContainer2<SemVar>)
+  case branch(CurrentVersionContainer<String>)
+  case semvar(CurrentVersionContainer<SemVar>)
 
   static func load(
     projectDirectory: String?,
@@ -31,18 +31,20 @@ enum VersionContainer: Sendable {
   }
 }
 
-struct CurrentVersionContainer2<Version> {
+// TODO: Add a precedence field for which version to prefer, should also be specified in
+//       configuration.
+struct CurrentVersionContainer<Version> {
   let targetUrl: URL
   let usesOptionalType: Bool
   let loadedVersion: Version?
-  // TODO: Rename to strategyVersion
-  let nextVersion: Version?
+  let precedence: Configuration.SemVar.Precedence?
+  let strategyVersion: Version?
 }
 
-extension CurrentVersionContainer2: Equatable where Version: Equatable {
+extension CurrentVersionContainer: Equatable where Version: Equatable {
 
   var hasChanges: Bool {
-    switch (loadedVersion, nextVersion) {
+    switch (loadedVersion, strategyVersion) {
     case (.none, .none):
       return false
     case (.some, .none),
@@ -54,9 +56,9 @@ extension CurrentVersionContainer2: Equatable where Version: Equatable {
   }
 }
 
-extension CurrentVersionContainer2: Sendable where Version: Sendable {}
+extension CurrentVersionContainer: Sendable where Version: Sendable {}
 
-extension CurrentVersionContainer2 where Version == String {
+extension CurrentVersionContainer where Version == String {
 
   static func load(
     branch: Configuration.Branch,
@@ -81,17 +83,19 @@ extension CurrentVersionContainer2 where Version == String {
       targetUrl: url,
       usesOptionalType: loaded?.1 ?? true,
       loadedVersion: loaded?.0,
-      nextVersion: next.description
+      precedence: nil,
+      strategyVersion: next.description
     )
   }
 
   var versionString: String? {
-    loadedVersion ?? nextVersion
+    loadedVersion ?? strategyVersion
   }
 }
 
-extension CurrentVersionContainer2 where Version == SemVar {
+extension CurrentVersionContainer where Version == SemVar {
 
+  // TODO: Update to use precedence and not fetch `nextVersion` if we loaded a file version.
   static func load(semvar: Configuration.SemVar, gitDirectory: String?, url: URL) async throws -> Self {
     @Dependency(\.fileClient) var fileClient
     @Dependency(\.logger) var logger
@@ -109,7 +113,8 @@ extension CurrentVersionContainer2 where Version == SemVar {
       targetUrl: url,
       usesOptionalType: usesOptionalType,
       loadedVersion: loaded,
-      nextVersion: next
+      precedence: semvar.precedence,
+      strategyVersion: next
     )
   }
 
@@ -152,11 +157,26 @@ extension CurrentVersionContainer2 where Version == SemVar {
   }
 
   func versionString(withPreRelease: Bool) -> String? {
-    nextVersion?.versionString(withPreReleaseTag: withPreRelease)
-      ?? loadedVersion?.versionString(withPreReleaseTag: withPreRelease)
+    let version: SemVar?
+
+    switch precedence ?? .default {
+    case .file:
+      version = loadedVersion ?? strategyVersion
+    case .strategy:
+      version = strategyVersion ?? loadedVersion
+    }
+
+    return version?.versionString(withPreReleaseTag: withPreRelease)
   }
 
+  // TODO: Move to where `bump` is declared and make fileprivate.
   func withUpdateNextVersion(_ next: SemVar) -> Self {
-    .init(targetUrl: targetUrl, usesOptionalType: usesOptionalType, loadedVersion: loadedVersion, nextVersion: next)
+    .init(
+      targetUrl: targetUrl,
+      usesOptionalType: usesOptionalType,
+      loadedVersion: loadedVersion,
+      precedence: .strategy, // make sure to use the next version, since it was specified, as this is called from `bump`.
+      strategyVersion: next
+    )
   }
 }

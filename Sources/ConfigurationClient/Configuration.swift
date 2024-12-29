@@ -251,6 +251,8 @@ public extension Configuration {
 
     public let allowPreRelease: Bool?
 
+    public let precedence: Precedence?
+
     /// Optional pre-releas suffix strategy.
     public let preRelease: PreRelease?
 
@@ -264,12 +266,14 @@ public extension Configuration {
 
     public init(
       allowPreRelease: Bool? = true,
+      precedence: Precedence? = .default,
       preRelease: PreRelease? = nil,
       requireExistingFile: Bool? = false,
       requireExistingSemVar: Bool? = false,
       strategy: Strategy? = nil
     ) {
       self.allowPreRelease = allowPreRelease
+      self.precedence = precedence
       self.preRelease = preRelease
       self.requireExistingFile = requireExistingFile
       self.requireExistingSemVar = requireExistingSemVar
@@ -279,6 +283,13 @@ public extension Configuration {
     public enum Strategy: Codable, Equatable, Sendable {
       case command(arguments: [String])
       case gitTag(exactMatch: Bool? = false)
+    }
+
+    public enum Precedence: String, Codable, Equatable, Sendable {
+      case file
+      case strategy
+
+      public static var `default`: Self { .file }
     }
 
   }

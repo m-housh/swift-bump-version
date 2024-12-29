@@ -147,13 +147,23 @@ extension CliClient.SharedOptions {
         try await write(container)
 
       case let .semvar(semvar):
-        // FIX: Fix with an option for precedence.
-        let version = semvar.loadedVersion ?? semvar.nextVersion
+
+        let version: SemVar?
+
+        switch semvar.precedence ?? .default {
+        case .file:
+          version = semvar.loadedVersion ?? semvar.strategyVersion
+        case .strategy:
+          version = semvar.strategyVersion ?? semvar.loadedVersion
+        }
+
+        // let version = semvar.loadedVersion ?? semvar.nextVersion
         guard let version else {
           throw CliClientError.semVarNotFound(message: "Failed to parse a valid semvar to bump.")
         }
-        logger.debug("Semvar prior to bumping: \(version)")
+        logger.dump(version, level: .debug) { "Version prior to bumping:\n\($0)" }
         let bumped = version.bump(type)
+        logger.dump(bumped, level: .trace) { "Bumped version:\n\($0)" }
         try await write(.semvar(semvar.withUpdateNextVersion(bumped)))
       }
     }
