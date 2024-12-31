@@ -21,6 +21,7 @@ struct CliClientTests {
       $0.fileClient.read = { @Sendable _ in template }
     } operation: {
       @Dependency(\.cliClient) var client
+
       let output = try await client.build(.testOptions(
         target: target,
         versionStrategy: .semvar(requireExistingFile: false)
