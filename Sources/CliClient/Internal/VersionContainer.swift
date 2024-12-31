@@ -18,13 +18,13 @@ enum VersionContainer: Sendable {
     case let .branch(includeCommitSha: includeCommitSha):
       return try await .branch(.load(
         branch: .init(includeCommitSha: includeCommitSha),
-        gitDirectory: projectDirectory,
+        projectDirectory: projectDirectory,
         url: url
       ))
     case .semvar:
       return try await .semvar(.load(
         semvar: strategy.semvar!,
-        gitDirectory: projectDirectory,
+        projectDirectory: projectDirectory,
         url: url
       ))
     }
@@ -62,7 +62,7 @@ extension CurrentVersionContainer where Version == String {
 
   static func load(
     branch: Configuration.Branch,
-    gitDirectory: String?,
+    projectDirectory: String?,
     url: URL
   ) async throws -> Self {
     @Dependency(\.fileClient) var fileClient
@@ -70,12 +70,12 @@ extension CurrentVersionContainer where Version == String {
 
     let loaded = try await fileClient.branch(
       file: url,
-      gitDirectory: gitDirectory,
+      projectDirectory: projectDirectory,
       requireExistingFile: false
     )
 
     let next = try await gitClient.version(.init(
-      gitDirectory: gitDirectory,
+      gitDirectory: projectDirectory,
       style: .branch(commitSha: branch.includeCommitSha)
     ))
 
@@ -95,13 +95,8 @@ extension CurrentVersionContainer where Version == String {
 
 extension CurrentVersionContainer where Version == SemVar {
 
-  // var preferredSemvar: SemVar? {
-  //   switch precedence {
-  //   }
-  // }
-
   // TODO: Update to use precedence and not fetch `nextVersion` if we loaded a file version.
-  static func load(semvar: Configuration.SemVar, gitDirectory: String?, url: URL) async throws -> Self {
+  static func load(semvar: Configuration.SemVar, projectDirectory: String?, url: URL) async throws -> Self {
     @Dependency(\.fileClient) var fileClient
     @Dependency(\.logger) var logger
 
@@ -109,10 +104,10 @@ extension CurrentVersionContainer where Version == SemVar {
 
     async let (loaded, usesOptionalType) = try await loadCurrentVersion(
       semvar: semvar,
-      gitDirectory: gitDirectory,
+      projectDirectory: projectDirectory,
       url: url
     )
-    async let next = try await loadNextVersion(semvar: semvar, projectDirectory: gitDirectory)
+    async let next = try await loadNextVersion(semvar: semvar, projectDirectory: projectDirectory)
 
     return try await .init(
       targetUrl: url,
@@ -125,7 +120,7 @@ extension CurrentVersionContainer where Version == SemVar {
 
   static func loadCurrentVersion(
     semvar: Configuration.SemVar,
-    gitDirectory: String?,
+    projectDirectory: String?,
     url: URL
   ) async throws -> (SemVar?, Bool) {
     @Dependency(\.fileClient) var fileClient
@@ -135,7 +130,7 @@ extension CurrentVersionContainer where Version == SemVar {
 
     let loadedOptional = try await fileClient.semvar(
       file: url,
-      gitDirectory: gitDirectory,
+      projectDirectory: projectDirectory,
       requireExistingFile: semvar.requireExistingFile ?? false
     )
     guard let loadedStrong = loadedOptional else {
@@ -174,14 +169,4 @@ extension CurrentVersionContainer where Version == SemVar {
     return version?.versionString(withPreReleaseTag: withPreRelease)
   }
 
-  // TODO: Move to where `bump` is declared and make fileprivate.
-  func withUpdateNextVersion(_ next: SemVar) -> Self {
-    .init(
-      targetUrl: targetUrl,
-      usesOptionalType: usesOptionalType,
-      loadedVersion: loadedVersion,
-      precedence: .strategy, // make sure to use the next version, since it was specified, as this is called from `bump`.
-      strategyVersion: next
-    )
-  }
 }

@@ -24,7 +24,7 @@ public struct CliClient: Sendable {
   public var build: @Sendable (SharedOptions) async throws -> String
 
   /// Bump the existing version.
-  public var bump: @Sendable (BumpOption?, SharedOptions) async throws -> String
+  public var bump: @Sendable (BumpOption, SharedOptions) async throws -> String
 
   /// Generate a version file with an optional version that can be set manually.
   public var generate: @Sendable (SharedOptions) async throws -> String

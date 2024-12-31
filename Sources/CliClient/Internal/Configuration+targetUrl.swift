@@ -6,16 +6,16 @@ import GitClient
 import ShellClient
 
 extension Configuration {
-  func targetUrl(gitDirectory: String?) throws -> URL {
+  func targetUrl(projectDirectory: String?) throws -> URL {
     guard let target else {
       throw ConfigurationParsingError.targetNotFound
     }
-    return try target.url(gitDirectory: gitDirectory)
+    return try target.url(projectDirectory: projectDirectory)
   }
 }
 
 private extension Configuration.Target {
-  func url(gitDirectory: String?) throws -> URL {
+  func url(projectDirectory: String?) throws -> URL {
     @Dependency(\.logger) var logger
 
     let filePath: String
@@ -42,8 +42,8 @@ private extension Configuration.Target {
       filePath = "\(path)/\(module.fileNameOrDefault)"
     }
 
-    if let gitDirectory {
-      return URL(filePath: "\(gitDirectory)/\(filePath)")
+    if let projectDirectory {
+      return URL(filePath: "\(projectDirectory)/\(filePath)")
     }
     return URL(filePath: filePath)
   }

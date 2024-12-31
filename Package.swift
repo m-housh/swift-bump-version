@@ -55,6 +55,7 @@ let package = Package(
       name: "ConfigurationClient",
       dependencies: [
         "FileClient",
+        "LoggingExtensions",
         .product(name: "CustomDump", package: "swift-custom-dump"),
         .product(name: "Dependencies", package: "swift-dependencies"),
         .product(name: "DependenciesMacros", package: "swift-dependencies")

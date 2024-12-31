@@ -7,10 +7,10 @@ import GitClient
 public extension FileClient {
   func branch(
     file: URL,
-    gitDirectory: String?,
+    projectDirectory: String?,
     requireExistingFile: Bool
   ) async throws -> (string: String, usesOptionalType: Bool)? {
-    let loaded = try? await getVersionString(fileUrl: file, gitDirectory: gitDirectory)
+    let loaded = try? await getVersionString(fileUrl: file, projectDirectory: projectDirectory)
     guard let loaded else {
       if requireExistingFile {
         throw CliClientError.fileDoesNotExist(path: file.cleanFilePath)
@@ -22,10 +22,10 @@ public extension FileClient {
 
   func semvar(
     file: URL,
-    gitDirectory: String?,
+    projectDirectory: String?,
     requireExistingFile: Bool
   ) async throws -> (semVar: SemVar?, usesOptionalType: Bool)? {
-    let loaded = try? await getVersionString(fileUrl: file, gitDirectory: gitDirectory)
+    let loaded = try? await getVersionString(fileUrl: file, projectDirectory: projectDirectory)
     guard let loaded else {
       if requireExistingFile {
         throw CliClientError.fileDoesNotExist(path: file.cleanFilePath)
@@ -38,7 +38,7 @@ public extension FileClient {
 
   private func getVersionString(
     fileUrl: URL,
-    gitDirectory: String?
+    projectDirectory: String?
   ) async throws -> (version: String, usesOptionalType: Bool) {
     @Dependency(\.gitClient) var gitClient
     @Dependency(\.logger) var logger

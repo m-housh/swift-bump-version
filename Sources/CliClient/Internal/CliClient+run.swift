@@ -29,7 +29,7 @@ extension CliClient.SharedOptions {
         }
 
         // This will fail if the target url is not set properly.
-        let targetUrl = try configuration.targetUrl(gitDirectory: projectDirectory)
+        let targetUrl = try configuration.targetUrl(projectDirectory: projectDirectory)
         logger.debug("Target: \(targetUrl.cleanFilePath)")
 
         // Perform the operation, which generates the new version and writes it.
@@ -82,19 +82,19 @@ extension CliClient.SharedOptions {
     @Dependency(\.logger) var logger
     logger.trace("Begin writing version.")
 
-    let hasChanges: Bool
+    // let hasChanges: Bool
     let targetUrl: URL
     let usesOptionalType: Bool
     let versionString: String?
 
     switch currentVersion {
     case let .branch(branch):
-      hasChanges = branch.hasChanges
+      // hasChanges = branch.hasChanges
       targetUrl = branch.targetUrl
       usesOptionalType = branch.usesOptionalType
       versionString = branch.versionString
     case let .semvar(semvar):
-      hasChanges = semvar.hasChanges
+      // hasChanges = semvar.hasChanges
       targetUrl = semvar.targetUrl
       usesOptionalType = semvar.usesOptionalType
       versionString = semvar.versionString(withPreRelease: allowPreReleaseTag)
@@ -132,11 +132,7 @@ extension CliClient.SharedOptions {
     }
   }
 
-  func bump(_ type: CliClient.BumpOption?) async throws -> String {
-    guard let type else {
-      return try await generate()
-    }
-
+  func bump(_ type: CliClient.BumpOption) async throws -> String {
     return try await run { container in
 
       @Dependency(\.logger) var logger
@@ -173,5 +169,17 @@ extension CliClient.SharedOptions {
     try await run { currentVersion in
       try await write(currentVersion)
     }
+  }
+}
+
+private extension CurrentVersionContainer where Version == SemVar {
+  func withUpdateNextVersion(_ next: SemVar) -> Self {
+    .init(
+      targetUrl: targetUrl,
+      usesOptionalType: usesOptionalType,
+      loadedVersion: loadedVersion,
+      precedence: .strategy, // make sure to use the next version, since it was specified, as this is called from `bump`.
+      strategyVersion: next
+    )
   }
 }
